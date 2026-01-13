@@ -187,7 +187,7 @@ function renderDevicesGrid(devices) {
   `;
 }
 
-// === MODAL AJUSTADO (SEM DELETE + AVANÇADO) ===
+// === MODAL DO DISPOSITIVO ===
 async function openDeviceModal(deviceId) {
     let device = {};
     if (deviceId) {
@@ -308,7 +308,7 @@ async function openDeviceModal(deviceId) {
     `;
 
     document.body.appendChild(modalOverlay);
-    setupHierarchySelects(device); // Função corrigida abaixo
+    setupHierarchySelects(device); 
 
     const closeModal = () => { if(document.body.contains(modalOverlay)) modalOverlay.remove(); };
     modalOverlay.querySelector('.admin-button-cancel').addEventListener('click', closeModal);
