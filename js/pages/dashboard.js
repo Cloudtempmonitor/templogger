@@ -532,6 +532,7 @@ function openDeviceDetails(deviceConfig) {
   
 }
 
+
 function checkInstallOverlay() {
     const overlay = document.getElementById('desktop-install-overlay');
     const closeBtn = document.querySelector('.close-overlay');
