@@ -168,7 +168,7 @@ function setupEventListeners() {
       if (passwordChanged || profileUpdated) {
         showNotification("Alterações salvas com sucesso!", "success");
         
-        // O reload agora serve apenas para limpar o estado de "edição" da UI
+        // Limpar o estado de "edição" da UI
         setTimeout(() => location.reload(), 1500);
       } else {
         showNotification("Nenhuma alteração detectada.", "info");
