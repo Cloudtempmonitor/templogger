@@ -42,7 +42,6 @@ export function renderAlarmChart(canvasId, readings) {
                     borderWidth: 2,
                     tension: 0.1
                 },
-                // ... adicione os outros datasets (umidade) aqui
             ]
         },
         options: {
