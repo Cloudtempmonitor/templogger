@@ -2,6 +2,13 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <meta name="theme-color" content="#3b82f6">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./img/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -46,5 +53,16 @@
   <script type="module" src="../js/ui/menu.js"></script>
   <script type="module" src="../js/pages/dashboard.js"></script>
 
+
+
+  <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(reg => console.log('SW registrado com sucesso:', reg.scope))
+                .catch(err => console.error('Falha ao registrar SW:', err));
+        });
+    }
+</script>
 </body>
 </html>
