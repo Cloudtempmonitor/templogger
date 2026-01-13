@@ -14,7 +14,7 @@ import {
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { showNotification} from "../ui/notifications.js";
 
-// Variáveis globais (adaptadas do código antigo)
+// Variáveis globais 
 let allDevicesConfig = {};
 let deviceCards = {};
 let deviceStatus = {};
@@ -45,7 +45,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       initDashboard();
     });
     // O AuthGuard (auth.js) já vai redirecionar pro login se falhar, 
-    // então não precisamos fazer isso aqui manualmente.
   }
 });
 async function initDashboard() {
@@ -95,10 +94,10 @@ async function buildUiTree(instId) {
   // Se não tiver unidades, retorna logo
   if (unitsSnapshot.empty) return result;
 
-  // 3. Busca TODOS os setores dessas unidades (Otimização: vamos buscar por unidade no loop)
-  // Nota: Para sistemas muito grandes, o ideal seria buscar tudo de uma vez, mas aqui faremos por partes para manter a lógica simples.
+  // 3. Busca TODOS os setores dessas unidades (Otimização: Buscar por unidade no loop)
+  // Para sistema muito grande, mudar para buscar tudo de uma vez.
 
-  // Vamos buscar também TODOS os dispositivos da instituição de uma vez para não fazer milhares de leituras
+  // Buscar também TODOS os dispositivos da instituição de uma vez para não fazer milhares de leituras
   const devicesQuery = query(
     collection(db, "dispositivos"),
     where("instituicaoID", "==", instId)
@@ -148,7 +147,7 @@ async function buildUiTree(instId) {
       // Pega os dispositivos deste setor do nosso mapa pré-carregado
       const setorDispositivos = devicesBySector[sectorId] || [];
 
-      // Só adiciona o setor se tiver nome (ou se quiser mostrar setores vazios)
+      // Só adiciona o setor se tiver nome 
       unidadeObj.setores.push({
         id: sectorId,
         nome: sectorData.nome || "Setor Sem Nome",
@@ -185,12 +184,12 @@ function renderDashboard(uiTree) {
   }
 
   uiTree.unidades.forEach((unidade) => {
-    // 🔍 Filtra apenas setores que possuem dispositivos
+    // Filtra apenas setores que possuem dispositivos
     const setoresComDispositivos = (unidade.setores || []).filter(
       (setor) => setor.dispositivos && setor.dispositivos.length > 0
     );
 
-    // 🚫 Se a unidade não tiver nenhum setor com dispositivos, ignora
+    //  Se a unidade não tiver nenhum setor com dispositivos, ignora
     if (setoresComDispositivos.length === 0) return;
 
     // Cria a Unidade
@@ -284,7 +283,7 @@ function renderDeviceCard(deviceConfig, data) {
         minute: "2-digit",
       });
 
-      // Verifica se está online (ex: dados com menos de 5 minutos)
+      // Verifica se está online 
       const now = new Date();
       const diffSeconds = (now - readingTime) / 1000;
 
@@ -314,7 +313,6 @@ function renderDeviceCard(deviceConfig, data) {
   }
 
   // 5. Monta o HTML interno
-  // Nota: Usamos deviceConfig.setorNome que passamos no renderDashboard
   const setorDisplay = deviceConfig.setorNome || "Setor";
 
   cardElement.innerHTML = `
