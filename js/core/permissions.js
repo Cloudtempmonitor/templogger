@@ -89,7 +89,7 @@ export const permissions = {
             return hasCommonInst;
         }
 
-        // Regra 3: Operador só edita a si mesmo (se a lógica da UI permitir)
+        // Regra 3: Operador só edita a si mesmo 
         if (targetUser.id === currentUser.uid) return true;
 
         return false;
