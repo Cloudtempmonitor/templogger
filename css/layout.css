@@ -9,7 +9,7 @@
 .main-container {
     width: 100%;
     max-width: 600px; /* Largura máxima padrão para admin e dashboard */
-    margin: 0 auto;    /* O segredo da centralização horizontal */
+    margin: 0 auto;   
     padding: 0 20px;   /* Margem de segurança para telas pequenas (mobile) */
     display: flex;
     flex-direction: column;
@@ -17,7 +17,7 @@
 
 /* Área da Direita (Conteúdo) */
 .main-layout {
-    flex: 1; /* Isso diz: "pegue todo o resto do espaço" */
+    flex: 1;
     display: flex;
     flex-direction: column;
     padding: 30px;
