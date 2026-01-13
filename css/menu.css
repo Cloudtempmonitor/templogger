@@ -1,5 +1,5 @@
 /* =====================================================
-   VÁRIAVEIS E RESET BÁSICO (Para garantir consistência)
+   VÁRIAVEIS E RESET BÁSICO 
    ===================================================== */
 :root {
   /* Adicionei uma fonte nativa para ficar bonito em qualquer OS */
@@ -59,7 +59,7 @@
     gap: 8px; /* Espaço entre nome e botões */
 }
 
-/* Container do nome (caso precise de ajustes específicos) */
+/* Container do nome  */
 .user-info {
     display: flex;
     align-items: center;
@@ -78,7 +78,7 @@
     text-overflow: ellipsis;
 }
 
-/* Melhoria no botão de Configuração */
+/* Botão de Configuração */
 .icon-btn {
   background: transparent;
   border: none;
@@ -126,7 +126,6 @@
   gap: 8px;
   padding: 8px 20px;
   background: var(--cor-fundo-menu-secundaria); 
-  /* Se a cor secundária for muito diferente, considere remover o background aqui */
   list-style: none;
   overflow-x: auto; /* Previne quebra se houver muitos itens */
 }
@@ -192,7 +191,7 @@
     z-index: 1000;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
     
-    /* Importante para iPhones novos (área segura do botão home) */
+    /* Para iPhones novos  */
     padding-bottom: env(safe-area-inset-bottom);
     height: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom));
   }
@@ -229,7 +228,7 @@
     font-weight: 600;
   }
   
-  /* Indicador visual de topo no item ativo (opcional, estilo moderno) */
+  /* Indicador visual de topo no item ativo  */
   .menu-mobile .menu-item.active {
     position: relative;
   }
