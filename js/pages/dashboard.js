@@ -556,3 +556,204 @@ function checkInstallOverlay() {
 
 // Chame a função
 document.addEventListener('DOMContentLoaded', checkInstallOverlay);
+
+
+
+
+// ======================================================
+// 6. INSTALAÇÃO DO PWA 
+// ======================================================
+
+let deferredPrompt = null;
+let installButton = null;
+
+// 1. Captura o evento de instalação
+window.addEventListener('beforeinstallprompt', (e) => {
+  
+  // Previne o prompt automático
+  e.preventDefault();
+  
+  // Armazena o evento para uso posterior
+  deferredPrompt = e;
+  
+  // Mostra o botão de instalação após 3 segundos
+  setTimeout(showInstallButton, 3000);
+});
+
+// 2. Função para mostrar botão de instalação
+function showInstallButton() {
+  if (window.innerWidth > 1024) return;
+  // Não mostra se já está instalado ou se já existe o botão
+  if (isPWAInstalled() || document.getElementById('pwa-install-button')) {
+    return;
+  }
+  
+  // Cria o botão
+  installButton = document.createElement('button');
+  installButton.id = 'pwa-install-button';
+  installButton.innerHTML = `
+    <span style="font-size: 20px;">📱</span>
+    <div style="text-align: left;">
+      <div style="font-weight: bold; font-size: 14px;">Instalar App</div>
+      <div style="font-size: 11px; opacity: 0.8;">Acesso rápido aos treinamentos</div>
+    </div>
+    <span style="margin-left: auto;">↓</span>
+  `;
+  
+  // Estilos
+  installButton.style.cssText = `
+    position: fixed;
+    bottom: 70px;
+    right: 20px;
+    background: linear-gradient(135deg, #153664 0%, #1e4a8e 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(21, 54, 100, 0.4);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 320px;
+    animation: slideInUp 0.5s ease, pulse 2s infinite;
+    transition: all 0.3s ease;
+  `;
+  
+  // Adiciona animação
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 6px 20px rgba(21, 54, 100, 0.4); }
+      50% { box-shadow: 0 6px 30px rgba(21, 54, 100, 0.7); }
+      100% { box-shadow: 0 6px 20px rgba(21, 54, 100, 0.4); }
+    }
+    
+    @media (max-width: 768px) {
+      #pwa-install-button {
+        left: 20px;
+        right: 20px;
+        bottom: 80px;
+        width: calc(100% - 40px);
+        max-width: none;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Evento de clique
+  installButton.addEventListener('click', installPWA);
+  
+  // Adiciona ao documento
+  document.body.appendChild(installButton);
+  
+  // Remove após 30 segundos
+  setTimeout(() => {
+    if (installButton && document.body.contains(installButton)) {
+      hideInstallButton();
+    }
+  }, 30000);
+}
+
+// 3. Função para instalar o PWA
+async function installPWA() {
+  if (!deferredPrompt) {
+    showManualInstallGuide();
+    return;
+  }
+  
+  try {
+    // Mostra o prompt de instalação
+    deferredPrompt.prompt();
+    
+    // Aguarda a resposta do usuário
+    const choiceResult = await deferredPrompt.userChoice;
+    if (choiceResult.outcome === 'accepted') {
+      // Sucesso na instalação
+      installButton.innerHTML = '✅ Instalado! O app será aberto em breve...';
+      installButton.style.background = '#28a745';
+      installButton.style.animation = 'none';
+      
+      setTimeout(hideInstallButton, 2000);
+    }
+    
+    // Limpa o prompt
+    deferredPrompt = null;
+    
+  } catch (error) {
+    installButton.innerHTML = '❌ Erro na instalação';
+    installButton.style.background = '#dc3545';
+    
+    setTimeout(hideInstallButton, 3000);
+  }
+}
+
+// 4. Função para esconder o botão
+function hideInstallButton() {
+  if (installButton && document.body.contains(installButton)) {
+    installButton.style.opacity = '0';
+    installButton.style.transform = 'translateY(50px)';
+    
+    setTimeout(() => {
+      if (installButton && document.body.contains(installButton)) {
+        installButton.remove();
+        installButton = null;
+      }
+    }, 300);
+  }
+}
+
+// 5. Verifica se o PWA já está instalado
+function isPWAInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches || 
+         window.navigator.standalone === true ||
+         document.referrer.includes('android-app://');
+}
+
+// 6. Guia de instalação manual (fallback)
+function showManualInstallGuide() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  
+  let message = '';
+  
+  if (isIOS) {
+    message = 'Para instalar: 1. Toque no ícone de compartilhar (📤) 2. Role para baixo 3. Toque em "Adicionar à Tela de Início"';
+  } else if (isAndroid) {
+    message = 'Para instalar: 1. Toque no menu (três pontos) 2. Toque em "Adicionar à tela inicial" 3. Confirme a instalação';
+  } else {
+    message = 'Para instalar: Clique no ícone de instalação (📥) na barra de endereços do navegador';
+  }
+  
+  alert(message);
+}
+
+// 7. Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+  // Verifica após carregamento completo
+  setTimeout(() => {
+    if (!isPWAInstalled() && deferredPrompt) {
+      showInstallButton();
+    }
+  }, 2000);
+  
+  // Monitora mudanças na visibilidade da página
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && deferredPrompt && !installButton) {
+      showInstallButton();
+    }
+  });
+  });
