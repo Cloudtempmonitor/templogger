@@ -320,7 +320,7 @@
         right: 10px; /* Ocupa largura total com margem */
         width: auto; /* Substitui largura fixa */
         max-width: none;
-        transform: translateY(-150%); /* Animação vindo de cima no mobile é mais natural */
+        transform: translateY(-150%); /* Animação vindo de cima no mobile */
     }
     
     .notification-toast.show {
