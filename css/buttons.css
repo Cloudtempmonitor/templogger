@@ -2,9 +2,9 @@
    BUTTONS.CSS - ESTILOS GLOBAIS DE BOTÕES
    ========================================================================== */
 
-/* ==========================================================================
+/* ---------------------------------------------------------------------------
    Botões Principais
-   ========================================================================== */
+  ------------------------------------------------------------------------- */
 
 .btn, .btn-primary, .btn-success {
     display: inline-flex;
@@ -109,10 +109,6 @@
 }
 
 
-/* ==========================================================================
-   Botões de Ação na Tabela/Lista (ícones)
-   ========================================================================== */
-
    /* ==========================================================================
    MENU DE AÇÕES (3 PONTOS / MEATBALL MENU)
    Padronizado para uso em tabelas e cards
@@ -123,7 +119,7 @@
     display: inline-block;
 }
 
-/* O Botão de 3 pontos (⋮) */
+/* Botão de 3 pontos (⋮) */
 .btn-meatball {
     background: transparent;
     border: none;
@@ -163,7 +159,7 @@
     margin-top: 5px;
 }
 
-/* TRUQUE: Se for um dos últimos 2 itens da lista... */
+/*Se for um dos últimos 2 itens da lista... */
 /* ...abra para CIMA (bottom: 100%) */
 .data-table tbody tr:nth-last-child(-n+2) .action-dropdown {
     top: auto;        /* Anula o top */
@@ -174,7 +170,6 @@
     transform-origin: bottom right; /* A animação deve sair de baixo */
 }
 
-/* No Mobile (Cards), a lógica é a mesma, pois as TRs viram blocos */
 @media (max-width: 768px) {
     /* Garante overflow visível no container da lista */
     #users-list-wrapper, 
@@ -252,7 +247,6 @@
 .btn-action-icon.btn-deactivate:hover { background: rgba(239, 68, 68, 0.1);  color: #ef4444; }
 .btn-action-icon.btn-restore:hover    { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 
-/* Botões com fundo na tabela (alternativa) */
 .btn-filled {
     border: none;
     border-radius: 6px;
