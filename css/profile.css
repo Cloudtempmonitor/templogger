@@ -4,7 +4,7 @@
 
 .profile-card {
   max-width: 760px;
-  margin: 60px auto 100px;           /* Mais espaço em cima por causa do menu superior */
+  margin: 60px auto 100px;   /* Mais espaço em cima por causa do menu superior */
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
