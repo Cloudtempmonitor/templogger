@@ -55,7 +55,6 @@ function processQueue() {
     document.body.appendChild(toast);
 
     // Força um reflow para garantir que a transição CSS funcione
-    // Usamos setTimeout para adicionar a classe .show, permitindo que o CSS controle a direção (mobile vs desktop)
     requestAnimationFrame(() => {
         toast.classList.add('show');
     });
@@ -139,7 +138,7 @@ export function showConfirmation(message, title = "Confirmar Ação") {
 
     const cleanup = (value) => {
       overlay.style.opacity = "0";
-      overlay.style.pointerEvents = "none"; // Impede cliques duplos durante a saída
+      overlay.style.pointerEvents = "none"; 
       
       // Remove do DOM após a animação de saída
       setTimeout(() => {
