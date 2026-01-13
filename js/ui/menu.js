@@ -15,7 +15,6 @@ async function loadMenu() {
   if (!container) return;
 
   try {
-    // Caminho relativo correto: de /js/ui/menu.js → /components/menu.html
     const response = await fetch("../components/menu.html");
     if (!response.ok) throw new Error("Menu HTML não encontrado");
 
@@ -77,7 +76,7 @@ function applyPermissions() {
 
   // Seleciona todos os elementos que têm restrição de acesso
   document.querySelectorAll("[data-role]").forEach(el => {
-    const requiredRole = el.dataset.role; // O que está escrito no HTML
+    const requiredRole = el.dataset.role; 
 
     let shouldShow = false;
 
@@ -93,7 +92,7 @@ function applyPermissions() {
         break;
       
       case "operador":
-        // Todo mundo vê (ou ajuste se quiser algo exclusivo de operador)
+        // Todo mundo vê 
         shouldShow = true; 
         break;
 
@@ -113,7 +112,7 @@ function setActiveMenu() {
   const currentPath = window.location.pathname
     .toLowerCase()
     .split("/")
-    .pop(); // ex: config-users.html
+    .pop(); 
 
   // Remove active de todos
   document.querySelectorAll(".menu-item.active").forEach(item => {
