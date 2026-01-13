@@ -41,7 +41,7 @@ export function initAuthGuard() {
       // Se estiver na página de login após sucesso, vai para o dashboard
       if (location.pathname.endsWith("login.html") || location.pathname.endsWith("/login")) {
         console.log("[AuthGuard] Login bem-sucedido → redirecionando para index.html");
-        window.location.replace("./index.html"); // ajuste se necessário
+        window.location.replace("./index.html"); 
       }
 
     } catch (error) {
