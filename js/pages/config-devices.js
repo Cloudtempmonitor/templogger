@@ -1,5 +1,5 @@
 // ==========================================================================
-// CONFIG-DEVICES.JS — Versão Final (Correção de Selects + CSS + Modal)
+// CONFIG-DEVICES.JS 
 // ==========================================================================
 
 import { db } from "../services/firebase.js";
