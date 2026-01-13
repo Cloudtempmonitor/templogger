@@ -1,6 +1,6 @@
 //   ../pages/config-users.js
 
-import { auth, db } from "../services/firebase.js"; // Singleton do Firebase
+import { auth, db } from "../services/firebase.js";
 import {
   getUser,
   getActiveInstitution,
@@ -14,7 +14,7 @@ import {
 import { showNotification, showConfirmation } from "../ui/notifications.js"; // UI
 import { initSearchBar } from "../ui/search-bar.js";
 import { permissions, hasRole, ROLES } from "../core/permissions.js";
-// Imports do Firestore/Auth via CDN (mesma versão do seu firebase.js)
+// Imports do Firestore/Auth via CDN 
 import {
   collection,
   query,
@@ -34,19 +34,19 @@ let hierarchyCache = {}; // Será preenchido pelo service
 let currentUser = null;
 const contentArea = document.getElementById("admin-content-area");
 
-// Variáveis de estado para a árvore de acesso (Mantidas do original)
+// Variáveis de estado para a árvore de acesso
 let selectedInst = new Set();
 let selectedUnit = new Set();
 let selectedSetor = new Set();
 let selectedDispositivo = new Set();
 let userManagementFilter = null;
 // ==========================================================================
-// 2. INICIALIZAÇÃO (Substitui o initUsersModule)
+// 2. INICIALIZAÇÃO 
 // ==========================================================================
 
 // Função de inicialização segura
 async function initPage() {
-  currentUser = getUser(); // Pega do state.js corrigido
+  currentUser = getUser(); // Pega do state.js 
 
   // Se o usuário ainda não carregou (ex: refresh na página), aguarda o evento
   if (!currentUser) {
@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ==========================================================================
-// 3. FUNÇÕES AUXILIARES PARA INSTITUIÇÃO ATIVA (ADICIONE AQUI)
+// 3. FUNÇÕES AUXILIARES PARA INSTITUIÇÃO ATIVA 
 // ==========================================================================
 
 async function determineActiveInstitution() {
@@ -110,7 +110,7 @@ async function determineActiveInstitution() {
   // Para SuperAdmin:
   if (hasRole(ROLES.SUPER_ADMIN)) {
     if (!userManagementFilter) {
-      // AJUSTE AQUI: Tenta pegar a instituição ativa global primeiro
+      // Tenta pegar a instituição ativa global primeiro
       const activeGlobal = getActiveInstitution();
       
       // Se tiver uma ativa no header, usa ela. Senão, usa "Todas".
@@ -243,7 +243,6 @@ export async function showUsuariosView() {
         // Remove a busca de onde ela estiver primeiro
         searchWrapper.remove();
         
-        // Insere ESTRITAMENTE antes do botão (Filtro já está lá, então fica no meio)
         topBar.insertBefore(searchWrapper, btnAdd);
 
         // Força limpeza de estilos inline que o mobile pode ter colocado
@@ -433,15 +432,15 @@ function setupViewEvents(allUsers, currentUser) {
             e.stopPropagation();
             const id = toggleBtn.dataset.id;
             
-            // Fecha outros menus e limpa z-index
+            // Fecha outros menus
             closeAllMenus();
 
             // Abre o atual
             const menu = document.getElementById(`menu-${id}`);
             if (menu) {
                 // Se já estava aberto, apenas fecha (o closeAllMenus já fechou, então não faz nada)
-                // Se estava fechado, abrimos:
-                if (!menu.classList.contains("show")) { // Lógica ajustada
+                // Se estava fechado, abre:
+                if (!menu.classList.contains("show")) {
                      menu.classList.add("show");
                      const parentRow = toggleBtn.closest("tr");
                      if (parentRow) parentRow.classList.add("z-active");
@@ -467,7 +466,6 @@ function setupViewEvents(allUsers, currentUser) {
     }
 
     // Fecha menu ao clicar fora
-    // (Apenas UM listener global é necessário)
     document.addEventListener("click", (e) => {
         if (!e.target.closest(".action-menu")) {
             closeAllMenus();
@@ -484,12 +482,10 @@ async function openUserModal(userId) {
   let user = {};
   const modalOverlay = document.createElement("div");
 
-  // CORREÇÃO 1: Usar a classe correta do seu CSS (admin-modal-overlay)
   modalOverlay.className = "admin-modal-overlay";
 
   try {
     if (userId) {
-      // Mostrar loading se necessário, ou apenas aguardar
       const docRef = doc(db, "usuarios", userId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
@@ -686,7 +682,7 @@ async function openUserModal(userId) {
     // 3. Adicionar ao DOM
     document.body.appendChild(modalOverlay);
 
-    // 4. Inicializa árvore (CORREÇÃO 3: Try/Catch específico para renderização)
+    // 4. Inicializa árvore (Try/Catch específico para renderização)
     try {
       // Garante que o cache existe antes de tentar renderizar
       if (!hierarchyCache || !hierarchyCache.instituicoes) {
@@ -711,7 +707,7 @@ async function openUserModal(userId) {
       .querySelector(".admin-button-cancel")
       .addEventListener("click", closeModal);
 
-    // Fecha ao clicar fora (opcional)
+    // Fecha ao clicar fora 
     modalOverlay.addEventListener("click", (e) => {
       if (e.target === modalOverlay) closeModal();
     });
@@ -853,11 +849,8 @@ function renderAccessDispositivos(setorId) {
   dispositivoList.innerHTML = "";
   const { dispositivosPermitidos } = getPermittedHierarchy();
 
-  // === CORREÇÃO CRÍTICA AQUI ===
-  // Mudamos de d.setorId para d.setorID (Verifique no seu banco se é ID ou Id)
-  // Normalmente no saveDevice você usou 'setorID'
   const dispositivos = dispositivosPermitidos.filter(
-    (d) => d.setorID === setorId || d.setorId === setorId // Aceita os dois casos para garantir
+    (d) => d.setorID === setorId || d.setorId === setorId 
   );
 
   if (dispositivos.length === 0) {
@@ -868,10 +861,9 @@ function renderAccessDispositivos(setorId) {
 
   dispositivos.forEach((dispositivo) => {
     const isChecked = selectedDispositivo.has(dispositivo.id);
-    // Dispositivo não tem filhos para navegar, então não precisa de evento de click na LI
     const li = createAccessListItem(
       dispositivo.id,
-      dispositivo.nomeDispositivo, // Nome correto do campo
+      dispositivo.nomeDispositivo, 
       isChecked,
       "dispositivo",
       { setorId }
@@ -1226,7 +1218,6 @@ async function saveUser(
     };
 
     if (!isNew) {
-      // só faz sentido em edição
       const targetUserRef = doc(db, "usuarios", finalUserId);
       const targetSnap = await getDoc(targetUserRef);
 
