@@ -1,8 +1,7 @@
 /* =====================================================
-   VÁRIAVEIS E RESET BÁSICO 
+   VÁRIAVEIS E RESET 
    ===================================================== */
 :root {
-  /* Adicionei uma fonte nativa para ficar bonito em qualquer OS */
   --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --header-height: 60px; /* Aumentei levemente para dar respiro */
   --mobile-bar-height: 65px;
@@ -28,19 +27,17 @@
   height: var(--header-height);
   padding: 0 20px; /* Mais preenchimento lateral */
   background: var(--cor-fundo-menu);
-  /* Borda mais sutil */
   border-bottom: 1px solid rgba(255, 255, 255, 0.08); 
 }
 
 .app-logo {
   display: flex;
   align-items: center;
-  gap: 12px; /* Mais espaço entre icone e texto */
+  gap: 12px; 
   color: var(--cor-texto-claro);
   text-decoration: none;
   font-weight: 700; /* Mais negrito para destaque */
-  letter-spacing: -0.5px; /* Deixa o texto mais "compacto" e moderno */
-}
+  letter-spacing: -0.5px; }
 
 .logo-icon {
   height: 32px; /* Ícone levemente maior */
@@ -135,7 +132,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  color: rgba(255, 255, 255, 0.7); /* Texto inativo um pouco mais apagado */
+  color: rgba(255, 255, 255, 0.7); /* Texto inativo pouco mais apagado */
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -184,14 +181,13 @@
     justify-content: space-around;
     align-items: center;
     background: var(--cor-fundo-menu);
-    /* Efeito de vidro (blur) se o fundo tiver transparência */
     backdrop-filter: blur(10px); 
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     list-style: none;
     z-index: 1000;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
     
-    /* Para iPhones novos  */
+    /* Para iPhones   */
     padding-bottom: env(safe-area-inset-bottom);
     height: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom));
   }
