@@ -1,5 +1,5 @@
 /* ==========================================================================
-   COMPONENTS.CSS - BARRA DE BUSCA + FAB (Lógica Final)
+   COMPONENTS.CSS - BARRA DE BUSCA + FAB 
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -287,7 +287,7 @@
         pointer-events: none;
     }
 
-    /* --- X DE LIMPEZA (Estilo Minimalista igual ao Desktop) --- */
+    /* --- X DE LIMPEZA --- */
     .btn-internal-clear {
         position: absolute;
         top: 50%;
@@ -326,7 +326,7 @@
         line-height: 1;
     }
 
-    /* Seta de recolher (Chevron Down/Close) */
+    /* Seta de recolher  */
     .mobile-close-search {
         display: block !important;
         position: absolute;
