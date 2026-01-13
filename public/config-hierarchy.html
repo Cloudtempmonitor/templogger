@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="../css/buttons.css">
     
     <style>
-        /* Loading inicial (igual ao config-users) */
+        /* Loading inicial */
         .loader {
             margin: 30px auto;
             width: 40px;
@@ -43,7 +43,7 @@
 </head>
 <body>
 
-    <!-- Menu será injetado aqui -->
+    <!-- Menu injetado aqui -->
     <div id="menu-container"></div>
 
     <main class="admin-container">
@@ -55,17 +55,16 @@
 
         <!-- Área de conteúdo principal -->
         <section class="admin-content-card" id="admin-content-area">
-            <!-- Estado de loading (será substituído pelo conteúdo) -->
+            <!-- Estado de loading -->
             <div id="hierarchy-loading" style="text-align:center; padding: 40px;">
                 <p style="color:#64748b; font-size:1rem; margin-bottom:15px;">Carregando estrutura...</p>
                 <div class="loader"></div>
             </div>
             
-            <!-- Conteúdo real (inicialmente escondido) -->
+            <!-- Conteúdo real  -->
             <div id="hierarchy-content" style="display: none;">
                 <!-- Botões de ação principais -->
                 <div class="hierarchy-actions">
-                    <!-- Botão será adicionado via JS para superAdmin -->
                 </div>
                 
                 <!-- Container das 3 colunas -->
