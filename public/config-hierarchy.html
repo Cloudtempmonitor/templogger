@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Hierarquia - TempTracker</title>
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CSS do Sistema -->
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/notifications.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="../css/config-hierarchy.css">
+    <link rel="stylesheet" href="../css/buttons.css">
+    
+    <style>
+        /* Loading inicial (igual ao config-users) */
+        .loader {
+            margin: 30px auto;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Menu será injetado aqui -->
+    <div id="menu-container"></div>
+
+    <main class="admin-container">
+        
+        <!-- Cabeçalho -->
+        <header class="admin-header-card" id="admin-title">
+            Gerenciar Hierarquia
+        </header>
+
+        <!-- Área de conteúdo principal -->
+        <section class="admin-content-card" id="admin-content-area">
+            <!-- Estado de loading (será substituído pelo conteúdo) -->
+            <div id="hierarchy-loading" style="text-align:center; padding: 40px;">
+                <p style="color:#64748b; font-size:1rem; margin-bottom:15px;">Carregando estrutura...</p>
+                <div class="loader"></div>
+            </div>
+            
+            <!-- Conteúdo real (inicialmente escondido) -->
+            <div id="hierarchy-content" style="display: none;">
+                <!-- Botões de ação principais -->
+                <div class="hierarchy-actions">
+                    <!-- Botão será adicionado via JS para superAdmin -->
+                </div>
+                
+                <!-- Container das 3 colunas -->
+                <div class="hierarchy-columns-container">
+                    <!-- Coluna 1: Instituições -->
+                    <div class="hierarchy-column" id="col-instituicoes">
+                        <div class="column-header">
+                            <h3><i class="fas fa-hospital"></i> Instituições</h3>
+                            <button id="add-new-inst" class="btn-icon-small" title="Adicionar instituição">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="column-content">
+                            <ul id="inst-list" class="hierarchy-list"></ul>
+                        </div>
+                        <div class="column-footer">
+                            <span id="inst-count">0 instituições</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Coluna 2: Unidades -->
+                    <div class="hierarchy-column" id="col-unidades">
+                        <div class="column-header">
+                            <h3><i class="fas fa-building"></i> Unidades</h3>
+                            <button id="add-new-unit" class="btn-icon-small" title="Adicionar unidade" style="display: none;">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="column-content">
+                            <ul id="unit-list" class="hierarchy-list"></ul>
+                        </div>
+                        <div class="column-footer">
+                            <span id="unit-count">Selecione uma instituição</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Coluna 3: Setores -->
+                    <div class="hierarchy-column" id="col-setores">
+                        <div class="column-header">
+                            <h3><i class="fas fa-door-closed"></i> Setores</h3>
+                            <button id="add-new-setor" class="btn-icon-small" title="Adicionar setor" style="display: none;">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="column-content">
+                            <ul id="setor-list" class="hierarchy-list"></ul>
+                        </div>
+                        <div class="column-footer">
+                            <span id="setor-count">Selecione uma unidade</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Informações de contexto -->
+                <div class="hierarchy-info">
+                    <p><i class="fas fa-info-circle"></i> Clique em uma instituição para ver suas unidades. Clique em uma unidade para ver seus setores.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts do Sistema -->
+    <script type="module" src="../js/ui/menu.js"></script>
+    <script type="module" src="../js/pages/config-hierarchy.js"></script>
+</body>
+</html>

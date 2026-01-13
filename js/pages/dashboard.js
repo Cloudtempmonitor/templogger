@@ -1,0 +1,533 @@
+// js/pages/dashboard.js — Carrega dashboard com hierarquia vertical e cards horizontais
+
+import { getUser, getActiveInstitution } from "../core/state.js";
+import { auth, db } from "../services/firebase.js";
+import {
+  doc,
+  getDoc,
+  getDocs,
+  collection,
+  query,
+  where,
+  onSnapshot,
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { showNotification} from "../ui/notifications.js";
+
+// Variáveis globais (adaptadas do código antigo)
+let allDevicesConfig = {};
+let deviceCards = {};
+let deviceStatus = {};
+let deviceAlarmStatus = {};
+let deviceListeners = {};
+let alarmListeners = {};
+let activeAlarms = new Set();
+let lastValidReadings = {};
+const OFFLINE_THRESHOLD_SECONDS = 200;  
+
+// Init: Após auth, carrega dados
+document.addEventListener("DOMContentLoaded", async () => {
+  const user = getUser();
+
+  // Cenário 1: Usuário já está no localStorage (login recente)
+  if (user) {
+    console.log("Usuário carregado do cache local:", user.email);
+    initDashboard();
+  }
+  // Cenário 2: Usuário null, mas pode ser delay do Firebase.
+  // NÃO REDIRECIONE AINDA. Espere o AuthGuard.
+  else {
+    console.log("Aguardando autenticação (AuthGuard)...");
+
+    // Escuta o evento que você criou no auth.js
+    window.addEventListener("userReady", () => {
+      console.log("AuthGuard confirmou usuário. Iniciando dashboard.");
+      initDashboard();
+    });
+    // O AuthGuard (auth.js) já vai redirecionar pro login se falhar, 
+    // então não precisamos fazer isso aqui manualmente.
+  }
+});
+async function initDashboard() {
+  const user = getUser();
+  if (!user) return;
+
+  const institution = getActiveInstitution();
+
+  if (!institution || !institution.id) {
+    showNotification(
+      "Nenhuma instituição selecionada. Redirecionando...",
+      "info"
+    );
+    setTimeout(() => window.location.replace("./login.html"), 2000);
+    return;
+  }
+
+  // 🔑 Usar APENAS o ID para lógica e Firestore
+  const uiTree = await buildUiTree(institution.id);
+  renderDashboard(uiTree);
+
+  setInterval(checkAllDeviceStatus, 60000);
+  checkAllDeviceStatus();
+}
+
+// Constrói a hierarquia uiTree (instituição > unidade > setor > devices)
+async function buildUiTree(instId) {
+  // 1. Busca dados da Instituição
+  const instDoc = await getDoc(doc(db, "instituicoes", instId));
+  if (!instDoc.exists()) return null;
+  const instData = instDoc.data();
+
+  // Estrutura base que o renderDashboard espera
+  const result = {
+    id: instId,
+    nome: instData.nome || "Instituição",
+    unidades: [], // Array vazio para começar
+  };
+
+  // 2. Busca TODAS as unidades dessa instituição
+  const unitsQuery = query(
+    collection(db, "unidades"),
+    where("instituicaoId", "==", instId)
+  );
+  const unitsSnapshot = await getDocs(unitsQuery);
+
+  // Se não tiver unidades, retorna logo
+  if (unitsSnapshot.empty) return result;
+
+  // 3. Busca TODOS os setores dessas unidades (Otimização: vamos buscar por unidade no loop)
+  // Nota: Para sistemas muito grandes, o ideal seria buscar tudo de uma vez, mas aqui faremos por partes para manter a lógica simples.
+
+  // Vamos buscar também TODOS os dispositivos da instituição de uma vez para não fazer milhares de leituras
+  const devicesQuery = query(
+    collection(db, "dispositivos"),
+    where("instituicaoID", "==", instId)
+  );
+  const devicesSnapshot = await getDocs(devicesQuery);
+
+  // Cria um mapa de dispositivos agrupados por SetorID para acesso rápido
+  const devicesBySector = {};
+  devicesSnapshot.forEach((doc) => {
+    const data = doc.data();
+    const sectorId = data.setorID;
+
+    if (!devicesBySector[sectorId]) devicesBySector[sectorId] = [];
+
+    // Adiciona o dispositivo à lista do setor, salvando o MAC (id do doc) e a config
+    devicesBySector[sectorId].push({
+      mac: doc.id,
+      ...data,
+    });
+
+    // Aproveita para atualizar o cache global de configurações
+    allDevicesConfig[doc.id] = data;
+  });
+
+  // 4. Monta a árvore Unidade -> Setor -> Dispositivos
+  for (const unitDoc of unitsSnapshot.docs) {
+    const unitData = unitDoc.data();
+    const unitId = unitDoc.id;
+
+    const unidadeObj = {
+      id: unitId,
+      nome: unitData.nome || "Unidade Sem Nome",
+      setores: [],
+    };
+
+    // Busca setores desta unidade
+    const sectorsQuery = query(
+      collection(db, "setores"),
+      where("unidadeId", "==", unitId)
+    );
+    const sectorsSnapshot = await getDocs(sectorsQuery);
+
+    sectorsSnapshot.forEach((sectorDoc) => {
+      const sectorId = sectorDoc.id;
+      const sectorData = sectorDoc.data();
+
+      // Pega os dispositivos deste setor do nosso mapa pré-carregado
+      const setorDispositivos = devicesBySector[sectorId] || [];
+
+      // Só adiciona o setor se tiver nome (ou se quiser mostrar setores vazios)
+      unidadeObj.setores.push({
+        id: sectorId,
+        nome: sectorData.nome || "Setor Sem Nome",
+        dispositivos: setorDispositivos,
+      });
+    });
+
+    // Adiciona a unidade completa à lista
+    result.unidades.push(unidadeObj);
+  }
+
+  // Ordena unidades por nome (opcional)
+  result.unidades.sort((a, b) => a.nome.localeCompare(b.nome));
+
+  return result;
+}
+
+// Renderiza o dashboard com hierarquia vertical e cards horizontais
+function renderDashboard(uiTree) {
+  const container = document.getElementById("dashboard-container");
+  if (!container) {
+    console.error(
+      "ERRO CRÍTICO: Elemento <main id='dashboard-container'> não encontrado no HTML."
+    );
+    return;
+  }
+
+  container.replaceChildren();
+
+  if (!uiTree || !uiTree.unidades || uiTree.unidades.length === 0) {
+    container.innerHTML =
+      '<div class="no-data">Nenhuma unidade encontrada.</div>';
+    return;
+  }
+
+  uiTree.unidades.forEach((unidade) => {
+    // 🔍 Filtra apenas setores que possuem dispositivos
+    const setoresComDispositivos = (unidade.setores || []).filter(
+      (setor) => setor.dispositivos && setor.dispositivos.length > 0
+    );
+
+    // 🚫 Se a unidade não tiver nenhum setor com dispositivos, ignora
+    if (setoresComDispositivos.length === 0) return;
+
+    // Cria a Unidade
+    const unitSection = document.createElement("section");
+    unitSection.className = "unit-section";
+
+    const unitName = document.createElement("div");
+    unitName.className = "unit-name";
+    unitName.textContent = unidade.nome;
+    unitSection.appendChild(unitName);
+
+    // Renderiza apenas setores válidos
+    setoresComDispositivos.forEach((setor) => {
+      const sectorSection = document.createElement("section");
+      sectorSection.className = "sector-section";
+
+      const sectorName = document.createElement("div");
+      sectorName.className = "sector-name";
+      sectorName.innerHTML = `<i class="fas fa-layer-group"></i> ${setor.nome}`;
+      sectorSection.appendChild(sectorName);
+
+      const sectorCardsContainer = document.createElement("div");
+      sectorCardsContainer.className = "sector-cards";
+
+      setor.dispositivos.forEach((deviceConfig) => {
+        const cardEl = document.createElement("div");
+        cardEl.className = "device-container";
+        cardEl.id = `card-${deviceConfig.mac}`;
+
+        sectorCardsContainer.appendChild(cardEl);
+        deviceCards[deviceConfig.mac] = cardEl;
+
+        renderDeviceCard({ ...deviceConfig, setorNome: setor.nome }, null);
+      });
+
+      sectorSection.appendChild(sectorCardsContainer);
+      unitSection.appendChild(sectorSection);
+    });
+
+    container.appendChild(unitSection);
+  });
+}
+
+// =========================================================================
+// FUNÇÃO DE RENDERIZAÇÃO DO CARD 
+// =========================================================================
+function renderDeviceCard(deviceConfig, data) {
+  // 1. Encontra ou cria o elemento do card
+  let cardElement = document.getElementById(`card-${deviceConfig.mac}`);
+  
+  // Se o card não existe, cria um novo
+  if (!cardElement) {
+    cardElement = document.createElement('div');
+    cardElement.id = `card-${deviceConfig.mac}`;
+    cardElement.className = 'device-card';
+    
+    // Adiciona ao container de dispositivos
+    const devicesContainer = document.getElementById('devices-container');
+    if (devicesContainer) {
+      devicesContainer.appendChild(cardElement);
+    }
+  }
+
+  // 2. Valores Padrão (se data for null, é o carregamento inicial)
+  let mainValue = "--";
+  let humidityValue = "--";
+  let timestampText = "Aguardando dados...";
+  let status = "OFFLINE";
+  let mainColor = "#2c3e50"; // Cor padrão (cinza escuro)
+  let badgeClass = "status-offline";
+  let isAlarm = false;
+
+  // 3. Processa os dados se existirem
+  if (data) {
+    // Temperatura
+    if (data.t !== undefined) {
+      mainValue = parseFloat(data.t).toFixed(1) + "°C";
+    }
+
+    // Umidade
+    if (data.h !== undefined) {
+      humidityValue = parseFloat(data.h).toFixed(0) + "%";
+    }
+
+    // Timestamp e Status Online/Offline
+    if (data.ts) {
+      // Converte timestamp do Firestore ou número
+      const readingTime = data.ts.toDate ? data.ts.toDate() : new Date(data.ts);
+      timestampText = readingTime.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // Verifica se está online (ex: dados com menos de 5 minutos)
+      const now = new Date();
+      const diffSeconds = (now - readingTime) / 1000;
+
+      if (diffSeconds < (OFFLINE_THRESHOLD_SECONDS || 300)) {
+        status = "ONLINE";
+        badgeClass = "status-online";
+      }
+    }
+
+    // 4. Lógica de Cores e Alarmes
+    const tempVal = parseFloat(data.t);
+    const min = parseFloat(deviceConfig.alarmeMin || -999);
+    const max = parseFloat(deviceConfig.alarmeMax || 999);
+
+    if (!isNaN(tempVal)) {
+      if (tempVal < min || tempVal > max) {
+        mainColor = "#e74c3c"; // Vermelho (Alarme)
+        isAlarm = true;
+        // Adiciona classe de borda piscante no container principal
+        cardElement.classList.add("in-alarm");
+      } else {
+        mainColor = "#27ae60"; // Verde (Normal)
+        // Remove alarme se voltou ao normal
+        cardElement.classList.remove("in-alarm");
+      }
+    }
+  }
+
+  // 5. Monta o HTML interno
+  // Nota: Usamos deviceConfig.setorNome que passamos no renderDashboard
+  const setorDisplay = deviceConfig.setorNome || "Setor";
+
+  cardElement.innerHTML = `
+    <div class="device-header">${setorDisplay}</div>
+    <div class="device-name">${deviceConfig.nome || deviceConfig.mac}</div>
+    
+    <div class="device-header" style="margin-top: 10px;">Temperatura</div>
+    <div class="main-temperature" style="color: ${mainColor};">
+      ${mainValue}
+    </div>
+
+    <div class="alarm-info">
+      <span>Min: ${deviceConfig.alarmeMin || "--"}°</span>
+      <span>Max: ${deviceConfig.alarmeMax || "--"}°</span>
+    </div>
+
+    ${
+      humidityValue !== "--"
+        ? `
+      <div class="additional-data">
+        <div class="data-item">
+          <div class="data-label">Umidade</div>
+          <div class="data-value">${humidityValue}</div>
+        </div>
+      </div>
+    `
+        : ""
+    }
+
+    <div class="timestamp">Atualizado: ${timestampText}</div>
+    <div class="status-badge ${badgeClass}">${status}</div>
+    
+    `;
+
+    cardElement.onclick = () => openDeviceDetails(deviceConfig);
+  
+  return cardElement;
+
+}
+
+function checkDeviceStatus(mac) {
+  const config = allDevicesConfig[mac];
+  const statusTimestamp = config?.statusTimestamp;
+  if (!config || !statusTimestamp) {
+    deviceStatus[mac] = "OFFLINE";
+    return;
+  }
+
+  try {
+    const nowMillis = Date.now();
+    const statusTimestampMillis = statusTimestamp.toMillis();
+    const differenceMillis = nowMillis - statusTimestampMillis;
+    deviceStatus[mac] =
+      differenceMillis > OFFLINE_THRESHOLD_SECONDS * 1000
+        ? "OFFLINE"
+        : "ONLINE";
+    if (deviceCards[mac]) updateCardContent(deviceCards[mac], mac);
+  } catch (e) {
+    console.warn(`Erro ao verificar status do MAC ${mac}:`, e);
+    deviceStatus[mac] = "OFFLINE";
+  }
+}
+
+function checkAllDeviceStatus() {
+  console.log("Executando verificação periódica de status...");
+  for (const mac in allDevicesConfig) {
+    checkDeviceStatus(mac);
+  }
+}
+
+//Função que atualiza o conteúdo de cada card.
+function updateCardContent(cardElement, mac) {
+  const deviceConfig = allDevicesConfig[mac];
+  const currentReading = deviceConfig.ultimasLeituras;
+  const status = deviceStatus[mac] || "OFFLINE";
+  const alarmState = deviceAlarmStatus[mac] || { ativo: false, tipo: "Nenhum" };
+  const isAlarm = alarmState.ativo === true;
+
+  cardElement.classList.toggle("in-alarm", isAlarm);
+
+  const isSondaAtiva = deviceConfig.sondaAtiva === true;
+  let mainValue = "N/A";
+  let ambientTempValue = "N/A";
+  let humidityValue = "N/A";
+  let timestampText = "Sem dados";
+  let mainColor = "#000000";
+  let alarmeMinDisplay = "N/A";
+  let alarmeMaxDisplay = "N/A";
+  let mainLabelText = isSondaAtiva
+    ? "🌡️ Sonda Externa"
+    : "🏠 Temperatura Ambiente";
+  let dataTexto = "--/--/----";
+  let horaTexto = "--:--";
+  let timestampLabel = "Última leitura:";
+
+  if (
+    status === "ONLINE" &&
+    currentReading &&
+    typeof currentReading === "object"
+  ) {
+    const tempSonda = currentReading.temperatura;
+    const tempAmb = currentReading.temperaturaAmbiente;
+    const umidade = currentReading.umidade;
+
+    if (tempAmb !== undefined && tempAmb > -50)
+      ambientTempValue = `${tempAmb.toFixed(1)}°C`;
+    if (umidade !== undefined)
+      humidityValue = `${parseFloat(umidade).toFixed(1)}%`;
+
+    if (isSondaAtiva) {
+      const minAlarm = deviceConfig.alarmeMin?.sonda;
+      const maxAlarm = deviceConfig.alarmeMax?.sonda;
+      alarmeMinDisplay = minAlarm !== undefined ? `${minAlarm}°C` : "N/A";
+      alarmeMaxDisplay = maxAlarm !== undefined ? `${maxAlarm}°C` : "N/A";
+      if (tempSonda !== undefined)
+        mainValue = tempSonda <= -100 ? "N/A" : `${tempSonda.toFixed(1)}°C`;
+    } else {
+      const minAlarmAmb = deviceConfig.alarmeMin?.temperaturaAmbiente;
+      const maxAlarmAmb = deviceConfig.alarmeMax?.temperaturaAmbiente;
+      alarmeMinDisplay = minAlarmAmb !== undefined ? `${minAlarmAmb}°C` : "N/A";
+      alarmeMaxDisplay = maxAlarmAmb !== undefined ? `${maxAlarmAmb}°C` : "N/A";
+      if (tempAmb !== undefined)
+        mainValue = tempAmb <= -100 ? "N/A" : `${tempAmb.toFixed(1)}°C`;
+
+      if (umidade !== undefined)
+        humidityValue =
+          umidade < 0 ? "N/A" : `${parseFloat(umidade).toFixed(1)}%`;
+    }
+
+    const timestamp = currentReading.timestamp;
+    if (timestamp && typeof timestamp.toDate === "function") {
+      const date = timestamp.toDate();
+      dataTexto = date.toLocaleDateString("pt-BR");
+      horaTexto = date.toLocaleTimeString("pt-BR");
+    }
+  } else {
+    mainColor = "#95a5a6";
+    if (
+      currentReading?.timestamp &&
+      typeof currentReading.timestamp.toDate === "function"
+    ) {
+      const date = currentReading.timestamp.toDate();
+      dataTexto = date.toLocaleDateString("pt-BR");
+      horaTexto = date.toLocaleTimeString("pt-BR");
+    }
+  }
+
+  const setorDisplay = deviceConfig.nomeSetor || "N/A";
+  const nomeDispositivoDisplay =
+    deviceConfig.nomeDispositivo || "Dispositivo Desconhecido";
+
+  const additionalDataHTML = isSondaAtiva
+    ? `
+        <div class="additional-data">
+          <div class="data-item">
+            <div class="data-label">Temp. Ambiente</div>
+            <div class="data-value">${ambientTempValue}</div>
+          </div>
+          <div class="data-item">
+            <div class="data-label">Umidade</div>
+            <div class="data-value">${humidityValue}</div>
+          </div>
+        </div>
+      `
+    : `
+        <div class="additional-data single-item">
+          <div class="data-item">
+            <div class="data-label">Umidade</div>
+            <div class="data-value">${humidityValue}</div>
+          </div>
+        </div>
+      `;
+
+  cardElement.innerHTML = `
+    <div class="device-header">${setorDisplay}</div>
+    <div class="device-name">${nomeDispositivoDisplay}</div>
+    <div class="device-header" style="font-weight: bold; color: ${
+      isSondaAtiva ? "var(--cor-texto-cinza)" : "#3498db"
+    };">
+      ${mainLabelText}
+    </div>
+    <div class="main-temperature" style="color: ${mainColor};">${mainValue}</div>
+    <div class="alarm-info">
+      <span style="color: #3498db;">${alarmeMinDisplay}</span>
+      &lt; alarmes &gt;
+      <span style="color: #e74c3c;">${alarmeMaxDisplay}</span>
+    </div>
+    ${additionalDataHTML}
+    <div class="timestamp">
+  <span class="label">${timestampLabel}</span>
+  <span class="datetime">
+    <span class="date">${dataTexto}</span>
+    <span class="time">${horaTexto}</span>
+  </span>
+</div>
+    <div class="status-badge status-${status.toLowerCase()}">${status}</div>
+  `;
+
+  cardElement.onclick = () => {
+ openDeviceDetails(deviceConfig);
+  };
+}
+
+
+//Função que direcionar para a página de detalhes do dispositivo clicado
+function openDeviceDetails(deviceConfig) {
+  const mac = deviceConfig.mac;
+  
+  if (!mac) {
+    console.error('Dispositivo sem MAC:', deviceConfig);
+    return;
+  }
+
+  window.location.href = `device-details.html?mac=${mac}`;
+  
+}

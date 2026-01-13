@@ -1,0 +1,54 @@
+/* Layout Principal */
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    background-color: var(--cor-fundo-pagina);
+}
+
+.main-container {
+    width: 100%;
+    max-width: 600px; /* Largura máxima padrão para admin e dashboard */
+    margin: 0 auto;    /* O segredo da centralização horizontal */
+    padding: 0 20px;   /* Margem de segurança para telas pequenas (mobile) */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Área da Direita (Conteúdo) */
+.main-layout {
+    flex: 1; /* Isso diz: "pegue todo o resto do espaço" */
+    display: flex;
+    flex-direction: column;
+    padding: 30px;
+    overflow-x: hidden;
+}
+
+/* O Card de contexto */
+.admin-card {
+    background: #ffffff;
+    border-radius: var(--raio-borda);
+    box-shadow: var(--sombra-card);
+    padding: 25px;
+    width: 100%;
+    max-width: 1200px; /* Limita a largura para não ficar esticado demais em monitores ultra-wide */
+    margin: 0 auto; /* Centraliza o card na área de conteúdo */
+}
+
+#institution-name-label {
+    margin: 20px 0;
+    padding: 25px; 
+    background: var(--cor-fundo-card); 
+    border-radius: var(--raio-borda); 
+    box-shadow: var(--sombra-card); 
+}
+
+#institution-name-label
+{
+    text-align: center;
+    color: var(--cor-texto-escuro);
+    margin-top: 5;
+    margin-bottom: 5px;
+    font-size: 1.6em;
+    font-weight: 600;
+}

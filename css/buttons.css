@@ -1,0 +1,375 @@
+/* ==========================================================================
+   BUTTONS.CSS - ESTILOS GLOBAIS DE BOTÕES
+   ========================================================================== */
+
+/* ==========================================================================
+   Botões Principais
+   ========================================================================== */
+.btn-primary,
+.admin-button-new {
+    background: linear-gradient(135deg, var(--cor-destaque-azul, #3498db), #2980b9);
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 120px;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary,
+.admin-button-cancel {
+    background: white;
+    color: var(--cor-texto-cinza, #64748b);
+    border: 2px solid #cbd5e1;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    min-width: 120px;
+    transition: all 0.2s ease;
+}
+
+.btn-success,
+.admin-button-save {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3);
+    min-width: 120px;
+    transition: all 0.2s ease;
+}
+
+.btn-danger,
+.admin-button-delete {
+    background: linear-gradient(135deg, var(--cor-alarme-vermelho, #ef4444), #dc2626);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3);
+    min-width: 120px;
+    transition: all 0.2s ease;
+}
+
+/* Hovers comuns + específicos */
+.btn-primary:hover,
+.admin-button-new:hover {
+    background: linear-gradient(135deg, #2980b9, #21618c);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(52, 152, 219, 0.3);
+}
+
+.btn-secondary:hover,
+.admin-button-cancel:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: var(--cor-texto-escuro, #334155);
+}
+
+.btn-success:hover,
+.admin-button-save:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}
+
+.btn-danger:hover,
+.admin-button-delete:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
+}
+
+/* ==========================================================================
+   Botões de Ação na Tabela/Lista (ícones)
+   ========================================================================== */
+
+   /* ==========================================================================
+   MENU DE AÇÕES (3 PONTOS / MEATBALL MENU)
+   Padronizado para uso em tabelas e cards
+   ========================================================================== */
+
+.action-menu {
+    position: relative;
+    display: inline-block;
+}
+
+/* O Botão de 3 pontos (⋮) */
+.btn-meatball {
+    background: transparent;
+    border: none;
+    color: #94a3b8; /* Cinza suave */
+    font-size: 1.2rem;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.2s, color 0.2s;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-meatball:hover,
+.btn-meatball.active {
+    background-color: #f1f5f9;
+    color: var(--cor-destaque-azul, #3498db);
+}
+
+/* O Dropdown (Lista de opções) */
+.action-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    min-width: 160px;
+    z-index: 100;
+    display: none; /* Escondido por padrão */
+    overflow: hidden;
+    bottom: auto;
+    margin-top: 5px;
+}
+
+/* TRUQUE: Se for um dos últimos 2 itens da lista... */
+/* ...abra para CIMA (bottom: 100%) */
+.data-table tbody tr:nth-last-child(-n+2) .action-dropdown {
+    top: auto;        /* Anula o top */
+    bottom: 100%;     /* Cola na parte de cima do botão */
+    margin-top: 0;
+    margin-bottom: 5px; /* Espacinho visual */
+    
+    transform-origin: bottom right; /* A animação deve sair de baixo */
+}
+
+/* No Mobile (Cards), a lógica é a mesma, pois as TRs viram blocos */
+@media (max-width: 768px) {
+    /* Garante overflow visível no container da lista */
+    #users-list-wrapper, 
+    .data-table tbody {
+        overflow: visible !important; 
+    }
+    
+    /* Garante que o Card permita que o menu saia dele */
+    .data-table tr.user-row {
+        overflow: visible !important;
+        position: relative; /* Necessário para o z-index funcionar */
+    }
+}
+
+.action-dropdown.show {
+    display: block;
+    animation: fadeInMenu 0.15s ease-out;
+}
+
+/* Itens do menu */
+.action-dropdown button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 15px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #475569;
+    transition: background 0.2s;
+}
+
+.action-dropdown button:hover {
+    background-color: #f8fafc;
+    color: var(--cor-destaque-azul);
+}
+
+/* Estilos específicos para ações destrutivas/importantes */
+.action-dropdown button.text-danger { color: #e74c3c; }
+.action-dropdown button.text-danger:hover { background: #fef2f2; }
+
+@keyframes fadeInMenu {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+.btn-action-icon {
+    
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: var(--cor-texto-cinza, #64748b);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+}
+.btn-action-icon.btn-edit{
+     color: #3498db
+}
+.btn-action-icon.btn-delete{
+     color: #ef4444
+}
+
+.btn-action-icon.btn-edit:hover       { background: rgba(52, 152, 219, 0.1); color: #3498db; }
+.btn-action-icon.btn-delete:hover,
+.btn-action-icon.btn-deactivate:hover { background: rgba(239, 68, 68, 0.1);  color: #ef4444; }
+.btn-action-icon.btn-restore:hover    { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+
+/* Botões com fundo na tabela (alternativa) */
+.btn-filled {
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-width: 80px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-filled.btn-edit       { background: linear-gradient(135deg, #3498db, #2980b9); color: white; box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2); }
+.btn-filled.btn-delete,
+.btn-filled.btn-deactivate { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); }
+.btn-filled.btn-restore    { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2); }
+
+.btn-filled:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0.95;
+}
+
+/* ==========================================================================
+   Containers de Ações e Modais
+   ========================================================================== */
+.actions-cell {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    min-width: 180px;
+}
+
+.item-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.item-actions button {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+    padding: 20px 30px;
+    border-top: 1px solid #e2e8f0;
+    background-color: white;
+    position: sticky;
+    bottom: 0;
+}
+
+.modal-actions .admin-button-cancel,
+.modal-actions .admin-button-save,
+.modal-actions .admin-button-delete {
+    min-width: 120px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ==========================================================================
+   Responsividade - Botões
+   ========================================================================== */
+@media (max-width: 768px) {
+    .btn-primary, .admin-button-new,
+    .btn-secondary, .admin-button-cancel,
+    .btn-success, .admin-button-save,
+    .btn-danger, .admin-button-delete {
+        width: 100%;
+        min-width: 100px;
+        padding: 10px 18px;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px 20px;
+    }
+
+    .modal-actions button {
+        width: 100%;
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-primary, .admin-button-new,
+    .admin-button-cancel, .admin-button-save,
+    .admin-button-delete {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        min-width: 90px;
+    }
+
+    .btn-edit, .btn-delete, .btn-restore, .btn-deactivate {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+        min-width: 65px;
+    }
+
+    .modal-actions {
+        padding: 12px 15px;
+        gap: 8px;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .actions-cell {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .actions-cell button {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 0;
+    }
+
+    .modal-actions {
+        gap: 12px;
+    }
+
+    .modal-actions button {
+        min-width: 110px;
+    }
+}

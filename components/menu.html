@@ -1,0 +1,112 @@
+<nav class="app-nav">
+
+   <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/menu.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+
+  <header class="app-header">
+    <div class="header-left">
+      <a href="../public/index.html" class="app-logo">
+        <img src="../assets/logo.svg" alt="Logo" class="logo-icon" 
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" />
+        <i class="fa-solid fa-temperature-half logo-fallback" style="display:none; font-size: 24px;"></i>
+        <span class="logo-text">Temp Monitor</span>
+      </a>
+    </div>
+
+    <div class="header-center">
+      <button class="institution-switch" id="btn-switch-institution">
+        <span class="institution-name">Selecionar instituição</span>
+        <i class="fa-solid fa-chevron-down" style="font-size: 12px; margin-left: 8px;"></i>
+      </button>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <span class="user-name" id="user-name">Carregando...</span>
+      </div>
+
+      <button class="icon-btn" id="btn-logout" title="Sair">
+        <i class="fa-solid fa-right-from-bracket"></i>
+      </button>
+    </div>
+  </header>
+
+  <ul class="menu-desktop">
+    <li class="menu-item">
+      <a href="./index.html" data-route="index">
+        <i class="fa-solid fa-house"></i>
+        <span class="label">Home</span>
+      </a>
+    </li>
+
+    <li class="menu-item">
+      <a href="./profile.html" data-route="profile">
+        <i class="fa-solid fa-user-circle"></i>
+        <span class="label">Minha Conta</span>
+      </a>
+    </li>
+
+    <li class="menu-item" data-role="admin">
+      <a href="./config-devices.html" data-route="devices">
+        <i class="fa-solid fa-microchip"></i>
+        <span class="label">Dispositivos</span>
+      </a>
+    </li>
+
+    <li class="menu-item" data-role="admin">
+      <a href="./config-hierarchy.html" data-route="structure">
+        <i class="fa-solid fa-building"></i>
+        <span class="label">Estrutura</span>
+      </a>
+    </li>
+
+    <li class="menu-item" data-role="admin">
+      <a href="./config-users.html" data-route="users">
+        <i class="fa-solid fa-users"></i>
+        <span class="label">Usuários</span>
+      </a>
+    </li>
+  </ul>
+
+  <ul class="menu-mobile">
+    <li class="menu-item">
+      <a href="./index.html" data-route="index">
+        <i class="fa-solid fa-house"></i>
+        <span class="label">Home</span>
+      </a>
+    </li>
+
+    <li class="menu-item">
+      <a href="./profile.html" data-route="profile">
+        <i class="fa-solid fa-user-circle"></i>
+        <span class="label">Perfil</span>
+      </a>
+    </li>
+
+    <li class="menu-item" data-role="admin">
+      <a href="./config-devices.html" data-route="devices">
+        <i class="fa-solid fa-microchip"></i>
+        <span class="label">Disp.</span>
+      </a>
+    </li>
+
+    <li class="menu-item" data-role="admin">
+      <a href="./config-hierarchy.html" data-route="structure">
+        <i class="fa-solid fa-building"></i>
+        <span class="label">Estrutura</span>
+      </a>
+    </li>
+
+    <li class="menu-item" data-role="admin">
+      <a href="./config-users.html" data-route="users">
+        <i class="fa-solid fa-users"></i>
+        <span class="label">Usuários</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+
+
+

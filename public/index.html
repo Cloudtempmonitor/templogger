@@ -1,0 +1,50 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Temp Monitor</title>
+
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/menu.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/notifications.css">
+  <link rel="stylesheet" href="../css/buttons.css">
+
+  <style>
+        .loader {
+            margin: 30px auto;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+  <div id="menu-container"></div>
+
+  <!-- Conteúdo principal -->
+  <main id="dashboard-container" class="dashboard">
+     <div id="hierarchy-loading" style="text-align:center; padding: 40px;">
+                <p style="color:#64748b; font-size:1rem; margin-bottom:15px;">Carregando painel...</p>
+                <div class="loader"></div>
+            </div>
+  </main>
+
+  <!-- JS -->
+  <script type="module" src="../js/ui/menu.js"></script>
+  <script type="module" src="../js/pages/dashboard.js"></script>
+
+</body>
+</html>

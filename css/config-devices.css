@@ -1,0 +1,291 @@
+/* ==========================================================================
+   CONFIG-DEVICES.CSS - FINAL UNIFICADO
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. LAYOUT GERAL & BARRA SUPERIOR (Topo)
+   -------------------------------------------------------------------------- */
+#devices-list-wrapper {
+    padding-bottom: 90px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+/* Barra Flexível: Filtro | Busca | Botão */
+.top-filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 60px;
+    padding: 10px 0;
+    gap: 15px;
+    flex-wrap: wrap; /* Permite quebrar linha em telas pequenas */
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+}
+
+/* --- A. FILTRO (Esquerda) --- */
+.filter-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #ffffff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.filter-wrapper:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.filter-icon { color: #64748b; font-size: 0.9rem; }
+
+.custom-select-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 0.95rem;
+    cursor: pointer;
+    min-width: 160px;
+}
+
+.native-select-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer;
+}
+
+.badge-inst-active {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+}
+
+/* --- B. BARRA DE BUSCA (Centro - Controlado via JS) --- */
+.search-component-wrapper {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 400px;
+    position: static !important;
+    transform: none !important;
+    flex-grow: 1; /* Ocupa o espaço central */
+}
+
+/* Estilo do Input quando está no topo */
+.global-search-input {
+    width: 100%;
+    height: 42px;
+    border-radius: 21px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    padding-left: 40px;
+    padding-right: 40px;
+    outline: none;
+    transition: all 0.2s;
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.global-search-input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* --- C. BOTÃO NOVO (Direita) --- */
+#btn-add-device {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    margin-left: 0;
+}
+
+#btn-add-device:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   2. GRID E CARDS (Estilo Aprovado)
+   -------------------------------------------------------------------------- */
+.devices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+    gap: 25px;
+}
+
+.device-card {
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-top: 5px solid #cbd5e1;
+}
+
+.device-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Cores de Status do Card */
+.device-card.card-online { border-top-color: #2ecc71; }
+.device-card.card-standby { border-top-color: #94a3b8; background: #fafafa; }
+
+/* Header Card */
+.device-header {
+    padding: 15px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.device-icon-large {
+    width: 42px; height: 42px;
+    background: #f1f5f9; color: #3b82f6;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+}
+
+.device-info-vertical {
+    display: flex; flex-direction: column; flex: 1; min-width: 0;
+}
+
+.device-info-vertical h3 {
+    margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e293b;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.d-unit { font-size: 0.85rem; font-weight: 600; color: #475569; }
+.d-sector { font-size: 0.75rem; color: #94a3b8; }
+
+.btn-action-icon {
+    width: 32px; height: 32px;
+    border: none; background: transparent;
+    color: #cbd5e1; cursor: pointer;
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+}
+.btn-action-icon:hover { background: #eff6ff; color: #3b82f6; }
+
+/* Body Card */
+.device-body { padding: 10px 15px; }
+.data-row {
+    display: flex; justify-content: space-between;
+    margin-bottom: 6px; font-size: 0.9rem;
+    border-bottom: 1px dashed #f1f5f9; padding-bottom: 4px;
+}
+.data-row small { color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 0.7rem; }
+.data-row strong { color: #334155; }
+
+/* Dashboard Icons */
+.icons-dashboard {
+    display: flex; justify-content: space-around;
+    background: #f8fafc; border-block: 1px solid #f1f5f9;
+    padding: 8px 0; margin-top: auto;
+}
+.icon-status { font-size: 1.1rem; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
+
+/* Footer */
+.device-footer {
+    padding: 10px 15px; background: white;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 12px;
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+}
+.pill-green { background: #ecfdf5; color: #047857; border: 1px solid #d1fae5; }
+.pill-gray { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+
+.footer-inst { font-size: 0.7rem; color: #cbd5e1; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --------------------------------------------------------------------------
+   3. MODAL (Avançado & Styles)
+   -------------------------------------------------------------------------- */
+.highlight-box {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    padding: 12px; border-radius: 8px; margin-bottom: 15px;
+}
+.soft-hr { border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0 10px 0; }
+.section-title { font-size: 0.9rem; color: #64748b; text-transform: uppercase; margin-bottom: 10px; }
+
+/* Details/Summary Avançado */
+.advanced-details {
+    border: 1px solid #cbd5e1; border-radius: 8px;
+    margin-top: 20px; overflow: hidden;
+}
+.advanced-details summary {
+    background: #f1f5f9; padding: 12px;
+    font-weight: 600; color: #475569; cursor: pointer;
+    list-style: none; display: flex; align-items: center; justify-content: space-between;
+}
+.advanced-details summary::after { content: '+'; font-weight: bold; font-size: 1.2rem; }
+.advanced-details[open] summary::after { content: '-'; }
+.details-content { padding: 15px; background: white; }
+
+/* Grupos de Alarme */
+.alarm-group {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 6px; padding: 10px; margin-bottom: 10px;
+}
+.alarm-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.alarm-title { font-weight: 600; color: #334155; font-size: 0.9rem; }
+.alarm-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-control.compact { padding: 6px 10px; font-size: 0.9rem; }
+
+/* Switches */
+.switch, .switch-small { position: relative; display: inline-block; }
+.switch { width: 50px; height: 26px; flex-shrink: 0; }
+.switch-small { width: 36px; height: 20px; flex-shrink: 0; }
+.switch input, .switch-small input { opacity: 0; width: 0; height: 0; }
+
+.slider, .slider-small { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.slider-small:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+
+input:checked + .slider, input:checked + .slider-small { background-color: #3b82f6; }
+input:checked + .slider:before { transform: translateX(24px); }
+input:checked + .slider-small:before { transform: translateX(16px); }
+
+/* --------------------------------------------------------------------------
+   4. RESPONSIVIDADE
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .top-filter-bar {
+        padding: 10px 15px;
+    }
+    
+    #btn-add-device { 
+        padding: 8px 12px; font-size: 0.85rem; 
+    }
+}

@@ -1,0 +1,221 @@
+/* ==========================================================================
+   DASHBOARD.CSS - Layout para hierarquia vertical e cards horizontais
+   ========================================================================== */
+
+.dashboard {
+ width: 100%;
+  max-width: 100%;
+  padding: 20px 0; 
+  font-family: Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+.institution-section {
+  margin-bottom: 40px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  background: #f9f9f9;
+}
+
+.institution-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.institution-name-label {
+  font-size: 24px;
+  color: #2c3e50;
+}
+
+.change-inst-icon {
+  cursor: pointer;
+  font-size: 20px;
+  color: #3498db;
+  transition: color 0.3s;
+}
+
+.change-inst-icon:hover {
+  color: #2980b9;
+}
+
+/* Unidade e Setor ocupando 100% */
+.unit-section, 
+.sector-section {
+  width: 100%;
+  display: block;
+  box-sizing: border-box; /* Garante que padding não estoure a largura */
+   margin-bottom: 48px;
+  padding: 20px 0 10px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.unit-section {
+margin-bottom: 40px;
+}
+
+
+.unit-name {
+  text-align: center;
+   font-size: 20px;
+  font-weight: 600;
+  color: #1f2d3d;
+  padding: 10px 16px;
+  margin-bottom: 24px;
+  background: rgba(0, 0, 0, 0.025);
+  border-left: 4px solid #2d89ef;
+}
+.sector-section {
+  margin-bottom: 28px;
+  padding: 12px 0;
+}
+
+.sector-name {
+  font-size: 18px;
+  color: #2c3e50;
+  font-weight: 500;
+  margin-bottom: 8px;
+  padding-left: 20px;
+}
+
+.sector-cards {
+  display: flex;
+  width: 100%;
+  overflow-x: auto;
+  gap: 12px;
+   background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.03),
+    rgba(0, 0, 0, 0.01)
+  );
+  border-radius: 8px;
+  padding: 10px 20px 20px 20px; /* Espaço para scrollbar */
+  box-sizing: border-box; /* Firefox */
+  scroll-snap-type: x mandatory;
+}
+
+.sector-cards::-webkit-scrollbar {
+  height: 8px;
+}
+
+.sector-cards::-webkit-scrollbar-thumb {
+  background: #bdc3c7;
+  border-radius: 4px;
+}
+
+.device-container {
+  min-width: 180px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.3s;
+  scroll-snap-align: start;
+}
+
+.device-container:hover {
+  transform: translateY(-5px);
+}
+
+.device-header {
+  font-size: 14px;
+  color: #7f8c8d;
+  margin: 2px 0;
+}
+
+.device-name {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 4px 0;
+}
+
+.main-temperature {
+  font-size: 26px;
+  font-weight: bold;
+}
+
+.alarm-info {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #95a5a6;
+  margin: 10px 0;
+}
+
+.additional-data {
+  display: flex;
+  justify-content: space-around;
+  margin: 15px 0;
+}
+
+.data-item {
+  text-align: center;
+}
+
+.data-label {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.data-value {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.timestamp {
+  font-size: 12px;
+  color: #bdc3c7;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.timestamp .label {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.timestamp .date {
+  font-size: 11px;
+}
+.timestamp .time {
+  font-size: 11px;
+}
+
+.status-badge {
+  margin-top: 10px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-online {
+  background: #2ecc71;
+  color: white;
+}
+
+.status-offline {
+  background: #e74c3c;
+  color: white;
+}
+
+.in-alarm {
+  border: 2px solid #e74c3c !important; /* Borda vermelha forçada */
+  background-color: #ffe6e6 !important; /* Fundo levemente avermelhado */
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.7); /* Brilho vermelho */
+  animation: piscar 1.5s infinite; /* Opcional: animação */
+}
+
+/* Animação para chamar atenção (opcional) */
+@keyframes piscar {
+  0% { opacity: 1; }
+  50% { opacity: 0.8; border-color: red; }
+  100% { opacity: 1; }
+}
+

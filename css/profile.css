@@ -1,0 +1,243 @@
+/* ==========================================================================
+   PROFILE.CSS - Versão limpa e moderna (2026)
+   ========================================================================== */
+
+.profile-card {
+  max-width: 760px;
+  margin: 60px auto 100px;           /* Mais espaço em cima por causa do menu superior */
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 32px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 32px;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  color: #475569;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.profile-header-info h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.profile-role {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ── Campos do formulário ──────────────────────────────────────── */
+
+.profile-info {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-input {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #1e293b;
+  transition: all 0.25s ease;
+}
+
+.profile-input:focus,
+.profile-input.editing {
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  outline: none;
+}
+
+.profile-input[readonly] {
+  background: #f1f5f9;
+  color: #475569;
+  cursor: default;
+}
+
+/* Botão editar */
+.btn-edit {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-edit:hover {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+/* ── Área de mudança de senha ──────────────────────────────────── */
+
+#password-edit-area {
+  display: none;                    /* Sempre inicia fechado */
+  margin-top: 16px;
+}
+
+.password-field-wrapper {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.password-input {
+  padding-right: 48px !important;
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.toggle-password-btn:hover,
+.toggle-password-btn:focus {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+/* Dica de senha */
+.password-hint {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* ── Botões de ação (Salvar / Cancelar) ────────────────────────── */
+
+.profile-actions {
+  margin-top: 40px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profile-actions button {
+  min-width: 140px;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .profile-card {
+    margin: 40px 16px 80px;
+    padding: 24px;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .profile-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .profile-actions button {
+    width: 100%;
+  }
+
+  /* Força espaço embaixo do conteúdo principal */
+  .admin-content {
+    padding-bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom) + 40px) !important;
+    min-height: calc(100vh - var(--header-height));
+    box-sizing: border-box;
+  }
+
+  /* Garante que o card não encoste na barra inferior */
+  .profile-card {
+    margin-bottom: 60px;
+  }
+
+  /* Se o conteúdo for muito curto, estica o container */
+  body:has(.profile-card) {
+    min-height: 100vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-card {
+    padding: 20px;
+  }
+
+  .profile-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .profile-avatar {
+    width: 70px;
+    height: 70px;
+    font-size: 1.9rem;
+  }
+
+  .toggle-password-btn {
+    right: 10px;
+    font-size: 1.1rem;
+  }
+}

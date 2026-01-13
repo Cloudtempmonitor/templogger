@@ -1,0 +1,548 @@
+/* ==========================================================================
+   CONFIG-USERS.CSS
+   Estilos específicos para a página de Gerenciamento de Usuários
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. LAYOUT GERAL & FILTROS (TOPO)
+   -------------------------------------------------------------------------- */
+#users-list-wrapper {
+    padding-bottom: 80px; /* Espaço para a barra fixa não cobrir o último item */
+}
+
+/* Barra de Filtros no Topo */
+.top-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* Container do Filtro (Estilo Botão/Select) */
+.filter-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8fafc;
+    padding: 8px 15px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    transition: all 0.2s;
+}
+
+.filter-wrapper:hover {
+    border-color: #94a3b8;
+    background: #fff;
+}
+
+.filter-icon {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.custom-select-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.native-select-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* Badge de Instituição Ativa (Para Admin) */
+.badge-inst-active {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   2. TABELA DE DADOS (DESKTOP DEFAULT)
+   -------------------------------------------------------------------------- */
+.data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.data-table th {
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    padding: 15px 20px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table td {
+    padding: 15px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    font-size: 0.95rem;
+    vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* Célula de Usuário (Nome + Bolinha) */
+.user-info-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-info-cell strong {
+    font-size: 1rem;
+    color: #1e293b;
+}
+
+/* Indicadores de Status (Bolinhas) */
+.dot-active, .dot-inactive {
+    width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+}
+.dot-active { background-color: #2ecc71; box-shadow: 0 0 4px #2ecc71; }
+.dot-inactive { background-color: #ef4444; opacity: 0.6; }
+
+/* Linha Inativa (Visual completo) */
+.user-row.inactive td {
+    background-color: #fef2f2;
+    color: #9ca3af;
+}
+.user-row.inactive .user-info-cell strong { color: #9ca3af; }
+
+/* Coluna de Ações (Menu) - Alinhada à direita */
+.data-table td:last-child {
+    text-align: right;
+    width: 60px; /* Largura fixa para o botão não sambar */
+}
+
+/* --------------------------------------------------------------------------
+   3. BARRA DE BUSCA INFERIOR (DARK MODE)
+   -------------------------------------------------------------------------- */
+.bottom-dark-bar {
+    position: fixed;
+    bottom: 0;
+    left: 280px; /* Desktop: Começa após o menu lateral */
+    width: calc(100% - 280px); /* Ocupa o resto */
+    height: 72px;
+    background: #1e293b; /* Azul Escuro Profissional */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 30px;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.15);
+    z-index: 1000;
+}
+
+.search-input-wrapper-dark {
+    width: 100%;
+    max-width: 600px; /* Não deixa esticar demais em monitores wide */
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon-dark {
+    position: absolute;
+    left: 15px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+#user-search-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 12px 15px 12px 45px;
+    border-radius: 30px;
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#user-search-input::placeholder { color: #64748b; }
+
+#user-search-input:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
+}
+
+/* --------------------------------------------------------------------------
+   4. MODAL - ÁRVORE DE ACESSO (HIERARQUIA)
+   -------------------------------------------------------------------------- */
+.hierarchy-access-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+.access-column strong {
+    display: block;
+    margin-bottom: 10px;
+    color: #475569;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.access-list {
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    height: 200px;
+    overflow-y: auto;
+    list-style: none;
+    padding: 0;
+}
+
+.access-list li {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.access-list li:hover { background: #f1f5f9; }
+.access-list li.active { background: #eff6ff; border-left: 3px solid #3b82f6; }
+
+/* --------------------------------------------------------------------------
+   5. RESPONSIVIDADE (MOBILE / TABLET)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    
+    /* === Ajuste da Barra Inferior === */
+    .bottom-dark-bar {
+        left: 0;
+        width: 100%;
+        padding: 0 15px;
+    }
+
+    /* === Transformação Tabela -> Cards === */
+    .data-table {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+    }
+
+    .data-table thead { display: none; } /* Esconde cabeçalho */
+    .data-table tbody { display: block; }
+
+    .data-table tr.user-row {
+        display: flex;           /* Flexbox para alinhar Nome e Menu */
+        align-items: center;
+        justify-content: space-between; /* Nome na ponta esquerda, Menu na ponta direita */
+        
+        background: white;
+        margin-bottom: 12px;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+
+    /* Coluna do Nome (Esquerda) */
+    .data-table td:nth-child(1) {
+        border: none;
+        padding: 0;
+        flex: 1; /* Ocupa o espaço disponível */
+        overflow: hidden; /* Evita quebra de layout se nome for gigante */
+    }
+
+    .user-info-cell {
+        flex-direction: row-reverse; /* Bolinha antes do nome ou manter padrão */
+        justify-content: flex-end; /* Mantém alinhado */
+        gap: 10px;
+    }
+    
+    .user-info-cell strong {
+        font-size: 1.1rem; /* Nome maior no mobile */
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Coluna do Menu (Direita) */
+    .data-table td:last-child {
+        border: none;
+        padding: 0;
+        width: auto;
+        flex: 0 0 auto; /* Não cresce nem encolhe */
+    }
+
+    /* Colunas Escondidas no Mobile */
+    .desktop-only { display: none !important; }
+
+    /* === Ajustes do Modal === */
+    .hierarchy-access-container {
+        grid-template-columns: 1fr; /* Uma coluna por vez */
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .access-list { height: 150px; }
+}
+
+/* ==========================================================================
+   CONFIG-USERS.CSS (Versão Corrigida e Sincronizada)
+   ========================================================================== */
+
+/* --- 1. Espaçamento para não esconder o último card atrás da barra --- */
+#users-list-wrapper {
+    padding-bottom: 90px;
+    width: 100%;
+}
+
+/* --- 2. Barra Superior (Filtro + Botão Novo) --- */
+.top-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap; /* Garante que não quebre em telas muito pequenas */
+    gap: 10px;
+}
+
+/* Estilo do Container do Filtro */
+.filter-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+.custom-select-container {
+    position: relative;
+    font-weight: 600;
+    color: #334155;
+    min-width: 150px;
+}
+
+.native-select-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* --- 3. Barra de Busca Inferior (Dark Mode) --- */
+.bottom-dark-bar {
+    position: fixed;
+    bottom: 0;
+    left: 280px; /* Desktop: considera menu lateral */
+    width: calc(100% - 280px);
+    height: 70px;
+    background-color: #1e293b; /* Azul escuro quase preto */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
+    z-index: 9999; /* Garante que fique acima de tudo */
+    box-sizing: border-box;
+}
+
+.search-input-wrapper-dark {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon-dark {
+    position: absolute;
+    left: 15px;
+    color: #94a3b8;
+    z-index: 10;
+}
+
+/* O Input de Busca */
+#user-search-input {
+    width: 100%;
+    height: 45px;
+    background: rgba(255, 255, 255, 0.1); /* Translúcido */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 25px;
+    padding-left: 45px; /* Espaço para o ícone */
+    padding-right: 15px;
+    color: #ffffff; /* Texto branco */
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s;
+}
+
+#user-search-input::placeholder {
+    color: #64748b;
+}
+
+#user-search-input:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #3498db;
+}
+
+/* --- 4. Tabela / Cards --- */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.user-info-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Status Dots */
+.dot-active { width: 10px; height: 10px; background: #2ecc71; border-radius: 50%; display: inline-block; }
+.dot-inactive { width: 10px; height: 10px; background: #ef4444; border-radius: 50%; display: inline-block; }
+
+/* Menu Meatball */
+.action-menu { position: relative; }
+.btn-meatball {
+    background: none; border: none; font-size: 1.2rem; color: #64748b; cursor: pointer; padding: 5px;
+}
+.action-dropdown {
+    display: none; position: absolute; right: 0; top: 100%;
+    background: white; border: 1px solid #e2e8f0; border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 50; min-width: 140px;
+}
+.action-dropdown.show { display: block; }
+.action-dropdown button {
+    display: block; width: 100%; padding: 10px; text-align: left;
+    background: none; border: none; cursor: pointer; color: #475569;
+}
+.action-dropdown button:hover { background: #f8fafc; color: #3498db; }
+
+/* --- 5. Responsividade Mobile --- */
+@media (max-width: 768px) {
+    /* Ajusta a barra inferior para ocupar toda a largura */
+    .bottom-dark-bar {
+        left: 0;
+        width: 100%;
+    }
+
+    /* Esconde colunas na tabela virando card */
+    .data-table thead { display: none; }
+    .data-table, .data-table tbody, .data-table tr, .data-table td {
+        display: block;
+        width: 100%;
+    }
+    
+    .data-table tr {
+        display: flex; /* Flex para alinhar nome e menu */
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+        margin-bottom: 10px;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+    }
+
+    .data-table td { border: none; padding: 0; }
+    
+    .desktop-only { display: none !important; }
+
+    /* Ajuste botão novo usuário no mobile para não ficar enorme */
+    #btn-add-user-top {
+        font-size: 0.9rem;
+        padding: 8px 16px;
+    }
+}
+
+
+@media (max-width: 768px) {
+    
+    /* 1. BARRA DE BUSCA (Subindo para não cobrir o menu) */
+    .bottom-dark-bar {
+        left: 0;
+        width: 100%;
+        /* Sobe 60px (altura média de menus mobile) + ajuste de safe area para iPhones */
+        bottom: calc(60px + env(safe-area-inset-bottom)); 
+        padding: 0 15px;
+        border-top-left-radius: 15px; /* Opcional: fica bonito arredondado em cima */
+        border-top-right-radius: 15px;
+    }
+
+    /* Ajuste para o padding final da lista acompanhar a subida da barra */
+    #users-list-wrapper {
+        padding-bottom: 140px; /* 60px do menu + 70px da barra + folga */
+    }
+
+    /* 2. CORREÇÃO DE Z-INDEX NOS CARDS */
+    .data-table tr.user-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+        margin-bottom: 10px;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        
+        /* O PULO DO GATO PARA O MENU FUNCIONAR: */
+        position: relative; 
+        z-index: 1; /* Padrão baixo */
+        overflow: visible !important; /* Garante que o menu possa "sair" do card */
+        transition: transform 0.2s, z-index 0s; /* Z-index instantâneo */
+    }
+
+    /* Classe que o JS vai adicionar quando o menu abrir */
+    .data-table tr.user-row.z-active {
+        z-index: 100 !important; /* Fica acima de tudo */
+        border-color: #3498db; /* Opcional: destaca a borda */
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+    }
+}

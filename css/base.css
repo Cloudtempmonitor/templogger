@@ -1,0 +1,40 @@
+/* ==========================================================================
+   BASE.CSS
+   ========================================================================== */
+:root {
+    --cor-fundo-menu: #2c3e50;
+    --cor-fundo-menu-secundaria: #34495e;
+    --cor-fundo-pagina: #f4f4f4;
+    --cor-fundo-card: #ffffff;
+
+    --cor-texto-claro: #ecf0f1;
+    --cor-texto-medio: #bdc3c7;
+    --cor-texto-escuro: #2c3e50;
+    --cor-texto-cinza: #7f8c8d;
+
+    --cor-destaque-azul: #3498db;
+    --cor-online-verde: #2ecc71;
+    --cor-alarme-vermelho: #e74c3c;
+    --cor-offline-vermelho: #e74c3c;
+
+    --largura-menu: 280px;
+    --raio-borda: 8px;
+    --sombra-card: 0 3px 6px rgba(0, 0, 0, 0.1);
+    --sombra-card-hover: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+}
+
+.btn {
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}

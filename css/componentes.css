@@ -1,0 +1,412 @@
+/* ==========================================================================
+   COMPONENTS.CSS - BARRA DE BUSCA + FAB (Lógica Final)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   ESTILO DESKTOP (PC) 
+   -------------------------------------------------------------------------- */
+.search-component-wrapper {
+    display: flex;
+    align-items: center;
+    flex: 1; 
+    justify-content: flex-end;
+    margin: 0 15px;
+    position: relative;
+}
+
+.mobile-search-fab,
+.mobile-close-search {
+    display: none !important;
+}
+
+.bottom-dark-bar {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    display: block;
+    transform: none !important;
+}
+
+.search-input-wrapper-dark {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.global-search-input {
+    position: relative; 
+    box-sizing: border-box; 
+    width: 100%;
+    height: 40px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    
+    padding-left: 35px;
+    padding-right: 10px;
+    
+    color: #334155;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.search-icon-dark {
+    position: absolute;
+    left: 10px;
+    color: #94a3b8;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.global-search-input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+@media (min-width: 769px) {
+    .top-filter-bar {
+        display: flex;
+        align-items: center; 
+        justify-content: space-between;
+        width: 100%;
+        padding: 10px 0;
+        gap: 20px;
+    }
+
+    .filter-wrapper {
+        margin-right: auto;
+    }
+    
+    .search-component-wrapper {
+        display: flex;
+        align-items: center;
+        
+        width: 300px; 
+        margin: 0 !important; 
+        
+        /* Limpezas do mobile */
+        position: static !important;
+        transform: none !important;
+        padding: 0 !important;
+        height: 40px; 
+    }
+
+    .bottom-dark-bar {
+        position: static !important;
+        display: block !important;
+        width: 100%;
+        transform: none !important;
+        visibility: visible !important;
+    }
+
+    .search-input-wrapper-dark {
+        width: 100%;
+        height: 100%; 
+    }
+    
+    .global-search-input {
+        height: 40px; 
+        margin: 0;
+    }
+
+    #btn-add-user-top {
+        margin-left: 15px;
+        height: 40px;     
+        display: inline-flex;
+        align-items: center;
+    }
+}
+
+.btn-internal-clear {
+    position: absolute;
+    
+    top: 50%;
+    transform: translateY(-50%);
+    
+    right: 12px;
+    
+    width: auto;
+    height: auto;
+    background: transparent !important;
+    border: none;
+    border-radius: 0;
+    
+    color: #94a3b8; 
+    font-size: 1rem;
+    padding: 8px;    
+    cursor: pointer;
+    
+    transition: color 0.2s ease;
+    z-index: 20;
+    
+    opacity: 0;
+    pointer-events: none;
+}
+
+.btn-internal-clear.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.btn-internal-clear:hover {
+    background: transparent !important;
+    color: #64748b;
+}
+
+.btn-internal-clear i {
+    position: static;
+    top: auto;
+    left: auto;
+    line-height: 1;
+    display: block;
+}
+
+@media (max-width: 768px) {
+  
+
+    .search-component-wrapper {
+        position: static;
+        display: block;
+        margin: 0;
+    }
+
+    /* --- O BOTÃO FLUTUANTE (FAB) --- */
+    .mobile-search-fab {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        
+        position: fixed;
+        right: 20px;
+        bottom: calc(90px + env(safe-area-inset-bottom)); /* Respeita a área segura do iPhone */
+        
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        
+        background: #1e293b; 
+        color: white;
+        border: none;
+        box-shadow: 0 4px 15px rgba(30, 41, 59, 0.4);
+        
+        z-index: 1050; 
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .mobile-search-fab.has-filter {
+        background: #e74c3c !important; 
+        transform: rotate(90deg); 
+        box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+    }
+
+    .mobile-search-fab:active {
+        transform: scale(0.9);
+    }
+
+    /* --- GAVETA DA BARRA INFERIOR --- */
+    .bottom-dark-bar {
+        position: fixed;
+        left: 0;
+        bottom: 0 !important;
+        
+        /* GARANTIA DE LARGURA TOTAL */
+        width: 100%; 
+        max-width: none; /* Previne herança de limites do desktop */
+        
+        height: 70px;
+        background-color: #1e293b;
+        padding: 0 15px; /* Espaçamento interno nas laterais */
+        
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+        z-index: -1; 
+        visibility: hidden; 
+        transform: translateY(100%); 
+        
+        transition: 
+            transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+            visibility 0s linear 0.3s, 
+            z-index 0s linear 0.3s;
+            
+        box-sizing: border-box; /* Essencial para o padding não estourar a tela */
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Quando aberta */
+    .search-active .bottom-dark-bar {
+        z-index: 1100; 
+        visibility: visible;
+        transform: translateY(0);
+        
+        transition: 
+            transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+            visibility 0s linear 0s, 
+            z-index 0s linear 0s;
+    }
+
+    /* --- INPUT E ÍCONES --- */
+    .search-input-wrapper-dark {
+        position: relative;
+        width: 100%; /* Ocupa todo o espaço dentro da barra */
+        display: flex;
+        align-items: center;
+    }
+
+    .global-search-input {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 25px;
+        color: white;
+        height: 45px;
+        width: 100%; /* Estica o input */
+        font-size: 1rem;
+        padding-left: 45px;
+        padding-right: 45px; /* Ajustei para balancear com o novo X */
+        outline: none; /* Remove borda azul padrão do Android */
+    }
+    
+    .global-search-input:focus {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: #3498db;
+    }
+
+    .search-icon-dark {
+        left: 15px;
+        font-size: 1.1rem;
+        position: absolute;
+        color: #94a3b8;
+        pointer-events: none;
+    }
+
+    /* --- X DE LIMPEZA (Estilo Minimalista igual ao Desktop) --- */
+    .btn-internal-clear {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 45px; /* Distância da seta de fechar */
+        
+        width: auto;
+        height: auto;
+        background: transparent; /* Sem fundo cinza */
+        
+        color: #94a3b8;
+        font-size: 1rem;
+        padding: 8px; /* Área de toque generosa */
+        cursor: pointer;
+        
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        
+        display: block;
+        border: none;
+    }
+
+    .btn-internal-clear.visible {
+        opacity: 1; /* CORREÇÃO: Estava 0 no seu código */
+        pointer-events: all;
+    }
+    
+    .btn-internal-clear:active {
+        color: white; /* Feedback visual ao tocar */
+    }
+
+    /* Reset do ícone dentro */
+    .btn-internal-clear i {
+        display: block;
+        line-height: 1;
+    }
+
+    /* Seta de recolher (Chevron Down/Close) */
+    .mobile-close-search {
+        display: block !important;
+        position: absolute;
+        right: 5px; /* Levemente mais para a borda */
+        color: #94a3b8;
+        font-size: 1.2rem;
+        padding: 10px;
+        cursor: pointer;
+        border-left: 1px solid rgba(255,255,255,0.1);
+        padding-left: 10px;
+        height: 100%; /* Facilita o clique vertical */
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* ==========================================================================
+   TOGGLE SWITCH (Botão Liga/Desliga)
+   ========================================================================== */
+
+/* O container do switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;  /* Largura do botão */
+  height: 26px; /* Altura do botão */
+  flex-shrink: 0; /* Garante que não amasse em flexbox */
+}
+
+/* Esconde o checkbox padrão feio */
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* O trilho (fundo) */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1; /* Cinza desligado (Slate-300) */
+  transition: .4s;
+}
+
+/* A bolinha */
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* ESTADO: LIGADO (Checked) */
+input:checked + .slider {
+  background-color: #3498db; /* Seu Azul */
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #3498db;
+}
+
+/* Mover a bolinha quando ligado */
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+/* Arredondar as bordas (formato de pílula) */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}

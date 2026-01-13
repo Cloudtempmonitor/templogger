@@ -1,0 +1,306 @@
+/* ==========================================================================
+   ADMIN.CSS - CORE (ESTRUTURA E ELEMENTOS COMUNS)
+   ========================================================================== */
+
+/* 1. LAYOUT & CONTAINERS */
+.admin-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.admin-header-card {
+    background: var(--cor-fundo-card, #ffffff);
+    padding: 25px;
+    border-radius: var(--raio-borda, 12px);
+    box-shadow: var(--sombra-card, 0 4px 20px rgba(0,0,0,0.08));
+    text-align: center;
+    color: var(--cor-texto-escuro, #2c3e50);
+    margin: 0;
+    font-size: 1.6em;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+}
+
+.admin-content-card, 
+#admin-content-area, 
+.admin-content-wrapper {
+    background: var(--cor-fundo-card, #ffffff);
+    padding: 30px;
+    border-radius: var(--raio-borda, 12px);
+    box-shadow: var(--sombra-card, 0 4px 20px rgba(0,0,0,0.08));
+    border: 1px solid #e2e8f0;
+    min-height: 400px;
+}
+
+#admin-title {
+    color: var(--cor-texto-escuro, #2c3e50);
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* 3. TABELAS BASE */
+.data-table, #admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 15px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.data-table th, #admin-table th {
+    background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+    color: var(--cor-texto-cinza, #64748b);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 16px 20px;
+    border-bottom: 2px solid #e2e8f0;
+    text-align: left;
+}
+
+.data-table td, #admin-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--cor-texto-escuro, #334155);
+    font-size: 0.9rem;
+    vertical-align: middle;
+    background: white;
+}
+
+.data-table tr:hover td, #admin-table tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* 4. MODAIS (ESTRUTURA) */
+.modal-overlay, .admin-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.admin-modal-content {
+    background: #fff;
+    width: 95%;
+    max-width: 850px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    
+    box-sizing: border-box; 
+    position: relative;
+    animation: modalAppear 0.3s ease-out;
+    overflow-x: hidden;
+}
+
+@keyframes modalAppear {
+    from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* 2. CABEÇALHO (Fixo no topo) */
+.admin-modal-content .modal-header {
+    /* Espaçamento interno (descola o título da borda) */
+    padding: 20px 50px; 
+    
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc; /* Fundo levemente cinza para destacar */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    /* Impede que o header encolha */
+    flex-shrink: 0; 
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--cor-texto-escuro);
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 30px 50px; 
+    font-size: 0.9rem;
+     flex: 1; /* Para ocupar espaço disponível */
+    overflow-y: auto; /* Se necessário scroll interno */
+}
+
+.modal-body hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 20px 0px;
+}
+
+/* 5. FORMULÁRIOS & BOTÕES DO MODAL */
+.form-group { 
+    margin-bottom: 20px;
+ }
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+.form-control, .form-group input, .form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    line-height: 1.4;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    border-color: var(--cor-destaque-azul);
+    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+    outline: none;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+    margin-top: 30px;
+    
+    border-top: 1px solid #e2e8f0;
+    background-color: #fff;
+    position: sticky;
+    bottom: 0;
+     flex-shrink: 0;
+     padding: 20px 50px !important;
+    margin-top: 20px;
+}
+
+/* Botão Cancelar */
+.admin-button-cancel {
+    background-color: #ffffff;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+    padding: 10px 40px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-button-cancel:hover {
+    background-color: #f1f5f9;
+    color: #334155;
+    border-color: #94a3b8;
+}
+
+/* Botão Salvar */
+.admin-button-save {
+    background: var(--cor-destaque-azul, #3498db);
+    color: #ffffff;
+    border: none;
+    padding: 10px 40px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);
+    
+}
+
+.admin-button-save:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.4);
+}
+
+.admin-button-save:active { transform: translateY(0); }
+
+/* 6. STATUS BADGES (USADO EM TODO O SISTEMA) */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    gap: 6px;
+}
+.status-badge::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.status-active { background: #e8f5e9; color: #2e7d32; }
+.status-active::before { background: #2ecc71; }
+.status-inactive { background: #f5f5f5; color: #616161; }
+.status-inactive::before { background: #95a5a6; }
+.status-alert { background: #ffebee; color: #c62828; animation: pulse 1.5s infinite; }
+.status-alert::before { background: #e74c3c; }
+
+/* 7. PAGINAÇÃO */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+.pagination button {
+    padding: 8px 16px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.pagination button:hover:not(:disabled), .pagination button.active {
+    background: var(--cor-destaque-azul);
+    color: white;
+    border-color: var(--cor-destaque-azul);
+}
+.pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 8. RESPONSIVIDADE GERAL */
+@media (max-width: 768px) {
+    .admin-container { padding: 10px; gap: 15px; }
+    .admin-content-card, .admin-header-card { padding: 20px; border-radius: 10px; }
+    .data-table th, .data-table td { padding: 12px 15px; font-size: 0.85rem; }
+    .modal-content { padding: 20px !important; }
+    .modal-body { padding: 20px !important; } /* Para mobile também */
+    .modal-header, .modal-actions {
+        padding: 15px 20px !important;
+    }
+}

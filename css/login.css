@@ -1,0 +1,129 @@
+/* ==========================================================================
+    LOGIN.CSS - Layout para PC e Mobile
+   ==========================================================================*/
+
+.login-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    min-height: 100svh;
+    background-color: var(--cor-fundo-pagina, #ecf0f1);
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.login-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 30px;
+    color: var(--cor-texto-escuro, #2c3e50);
+}
+
+.login-container {
+    background: var(--cor-fundo-card, white);
+    padding: 35px;
+    border-radius: var(--raio-borda, 12px);
+    box-shadow: var(--sombra-card, 0 8px 25px rgba(0, 0, 0, 0.15));
+    width: 100%;
+    max-width: 360px;
+    z-index: 10;
+}
+
+.login-container h2 {
+    margin-bottom: 25px;
+    color: var(--cor-texto-escuro, #2c3e50);
+    font-size: 22px;
+}
+
+.login-container input {
+    width: 100%;
+    padding: 14px;
+    margin: 12px 0;
+    border: 1px solid #bdc3c7;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+.login-container input:focus {
+    border-color: var(--cor-destaque-azul, #3498db);
+    outline: none;
+    box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+}
+
+.login-btn {
+    width: 100%;
+    padding: 14px;
+    margin-top: 20px;
+    background: var(--cor-destaque-azul, #3498db);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.login-btn:hover:not(:disabled) {
+    background: #2980b9;
+}
+
+.login-btn:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+}
+
+/* ========================= MODAL ========================= */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 420px;
+    text-align: center;
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 101;
+}
+
+.modal h3 {
+    margin: 0 0 10px 0;
+    color: var(--cor-texto-escuro, #2c3e50);
+    font-size: 20px;
+}
+
+.modal p {
+    color: #555;
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+#institution-list {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #bdc3c7;
+}
+
+.modal-actions {
+    margin-top: 10px;
+}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Dispositivos - TempTracker</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+ <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/notifications.css">
+    <link rel="stylesheet" href="../css/admin.css"> </head>
+    <link rel="stylesheet" href="../css/config-devices.css">
+    <link rel="stylesheet" href="../css/buttons.css">
+    <link rel="stylesheet" href="../css/componentes.css">
+    
+     <style>
+        /* Loading inicial (igual ao config-users) */
+        .loader {
+            margin: 30px auto;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    
+</head>
+<body>
+
+    <div id="menu-container"></div>
+
+    <main class="admin-container">
+        
+
+        <header class="admin-header-card" id="admin-title">Gerenciar Dispositivos</header>
+    
+        <section class="admin-content-card">
+            
+            <div id="devices-loading" style="text-align:center; padding: 40px;">
+                <div class="loader"></div>
+                <p>Carregando dispositivos...</p>
+            </div>
+            
+            <div id="devices-content" style="display: none;">
+                <div class="devices-actions">
+                    </div>
+                <div class="devices-list-container">
+                    </div>
+            </div>
+             
+        </section>
+    </main>
+<script type="module" src="../js/ui/menu.js"></script>
+    <script type="module" src="../js/pages/config-devices.js"></script>
+</body>
+</html>
