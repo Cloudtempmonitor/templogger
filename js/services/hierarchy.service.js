@@ -2,7 +2,7 @@
 
 import { db } from './firebase.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getUser } from "../core/state.js"; // <--- IMPORTANTE
+import { getUser } from "../core/state.js"; 
 
 // Cache em memória
 let hierarchyCache = {
@@ -18,7 +18,7 @@ export async function loadHierarchyCache(force = false) {
     if (isLoaded && !force) return hierarchyCache;
 
     try {
-        // 1. Busca tudo do banco (Em produção com muitos dados, o ideal seria filtrar na query)
+        // 1. Busca tudo do banco
         const [instSnap, unitSnap, sectorSnap, deviceSnap] = await Promise.all([
             getDocs(collection(db, "instituicoes")),
             getDocs(collection(db, "unidades")),
@@ -32,12 +32,11 @@ export async function loadHierarchyCache(force = false) {
         const rawSetores = sectorSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const rawDispositivos = deviceSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // 3. FILTRAGEM DE SEGURANÇA (NOVO)
+        // 3. FILTRAGEM DE SEGURANÇA
         const user = getUser();
         
         if (user && user.nivel !== 'superAdmin') {
             // Se não for SuperAdmin, filtra apenas o que ele tem acesso
-            // Graças ao novo state.js, os arrays acessoXXX sempre existem (não são undefined)
 
             hierarchyCache.instituicoes = rawInstituicoes.filter(i => 
                 user.acessoInstituicoes.includes(i.id)
