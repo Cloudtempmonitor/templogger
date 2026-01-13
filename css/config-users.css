@@ -1,6 +1,5 @@
 /* ==========================================================================
    CONFIG-USERS.CSS
-   Estilos específicos para a página de Gerenciamento de Usuários
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -532,14 +531,12 @@
         border: 1px solid #e2e8f0;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         
-        /* O PULO DO GATO PARA O MENU FUNCIONAR: */
         position: relative; 
-        z-index: 1; /* Padrão baixo */
+        z-index: 1;
         overflow: visible !important; /* Garante que o menu possa "sair" do card */
         transition: transform 0.2s, z-index 0s; /* Z-index instantâneo */
     }
 
-    /* Classe que o JS vai adicionar quando o menu abrir */
     .data-table tr.user-row.z-active {
         z-index: 100 !important; /* Fica acima de tudo */
         border-color: #3498db; /* Opcional: destaca a borda */
