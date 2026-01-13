@@ -2,7 +2,7 @@
 
 import { auth, db } from "../services/firebase.js";
 
-// Importa funções específicas do Firestore
+// Importa funções do Firestore
 import { collection, doc, getDoc, getDocs, onSnapshot, query, where, orderBy, startAt, endAt, Timestamp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Importa funções específicas do Auth
@@ -148,7 +148,7 @@ async function fetchAlarmEvents(startTimeStamp, endTimeStamp) {
       alarmEvents.push({
         id: doc.id,
         ...eventData,
-        // Converte de volta para timestamp Unix se necessário
+        // Converte de volta para timestamp Unix
         startTimestamp: eventData.startTime?.toMillis() / 1000,
         endTimestamp: eventData.endTime?.toMillis() / 1000,
       });
@@ -187,7 +187,6 @@ function listenToDeviceStatus(mac) {
             // ATUALIZA NOME E INFO CARD 
             deviceNameEl.textContent = deviceData.nomeDispositivo || "Dispositivo sem nome";
             
-            // (Presume que o campo no Firestore se chama 'nomeUnidade')
             unidadeEl.textContent = deviceData.nomeUnidade || "Não definida"; 
             setorEl.textContent = deviceData.nomeSetor || "Não definido";
 
@@ -377,7 +376,7 @@ function renderChart(readings) {
 }
 
 
-// * (Controlador) Lê o período do flatpickr e chama o fetchData.
+// Lê o período do flatpickr e chama o fetchData.
 async function updateChartData() {
   if (!currentMac || !flatpickrInstance) return;
 
