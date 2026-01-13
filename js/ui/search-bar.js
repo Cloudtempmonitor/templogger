@@ -3,8 +3,6 @@
 export function initSearchBar(onSearch, placeholder = "Buscar...") {
     // Evita duplicar se já existe na DOM
     if (document.querySelector('.search-component-wrapper')) {
-        // Se já existe, apenas atualiza o listener de busca (opcional, mas seguro)
-        // Por simplificação, assumimos que ele é criado uma vez por carga de página.
         return; 
     }
 
