@@ -1,9 +1,9 @@
 // js/services/devices.service.js
 
 import { db } from './firebase.js'; 
-import { getUser } from "../core/state.js"; // Importante para validações futuras
+import { getUser } from "../core/state.js"; 
 
-// IMPORTAÇÕES DO FIRESTORE
+
 import { 
     collection, 
     query, 
@@ -32,7 +32,7 @@ export async function hasLinkedDevices(fieldName, id) {
         
         const devicesRef = collection(db, "dispositivos");
         
-        // Query otimizada
+        // Query 
         const q = query(
             devicesRef, 
             where(fieldName, "==", id),
