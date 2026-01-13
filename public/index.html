@@ -1,70 +1,98 @@
 <!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="pt-br">
-<head>
+  <head>
+    <meta name="theme-color" content="#3b82f6" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./img/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
 
-    
-    <meta name="theme-color" content="#3b82f6">
-<link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./img/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - Temp Monitor</title>
 
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/menu.css" />
+    <link rel="stylesheet" href="../css/dashboard.css" />
+    <link rel="stylesheet" href="../css/notifications.css" />
+    <link rel="stylesheet" href="../css/buttons.css" />
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard - Temp Monitor</title>
+    <style>
+      .loader {
+        margin: 30px auto;
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
 
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/menu.css">
-  <link rel="stylesheet" href="../css/dashboard.css">
-  <link rel="stylesheet" href="../css/notifications.css">
-  <link rel="stylesheet" href="../css/buttons.css">
-
-  <style>
-        .loader {
-            margin: 30px auto;
-            width: 40px;
-            height: 40px;
-            border: 3px solid #e2e8f0;
-            border-top-color: #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        100% {
+          transform: rotate(360deg);
         }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <div id="menu-container"></div>
 
-  <div id="menu-container"></div>
-
-  <!-- Conteúdo principal -->
-  <main id="dashboard-container" class="dashboard">
-     <div id="hierarchy-loading" style="text-align:center; padding: 40px;">
-                <p style="color:#64748b; font-size:1rem; margin-bottom:15px;">Carregando painel...</p>
-                <div class="loader"></div>
+    <!-- Conteúdo principal -->
+    <main id="dashboard-container" class="dashboard">
+      <div id="hierarchy-loading" style="text-align: center; padding: 40px">
+        <p style="color: #64748b; font-size: 1rem; margin-bottom: 15px">
+          Carregando painel...
+        </p>
+        <div class="loader"></div>
+      </div>
+    </main>
+    
+    
+    
+    <div id="desktop-install-overlay" class="install-overlay">
+    <div class="install-card">
+        <button class="close-overlay">&times;</button>
+        <div class="install-content">
+            <img src="../assets/logo.png" alt="Logo" class="install-logo">
+            <h2>Cloud Temp Monitor</h2>
+            <p>Para uma melhor experiência, instale nosso App no seu celular.</p>
+            <div class="qr-code-container">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://cloudtempmonitor.github.io/templogger/public/login.html" alt="QR Code">
             </div>
-  </main>
+            <span class="scan-label">Aponte a câmera do celular para escanear</span>
+        </div>
+    </div>
+</div>
 
-  <!-- JS -->
-  <script type="module" src="../js/ui/menu.js"></script>
-  <script type="module" src="../js/pages/dashboard.js"></script>
+    <!-- JS -->
+    <script type="module" src="../js/ui/menu.js"></script>
+    <script type="module" src="../js/pages/dashboard.js"></script>
 
-
-
-  <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./service-worker.js')
-                .then(reg => console.log('SW registrado com sucesso:', reg.scope))
-                .catch(err => console.error('Falha ao registrar SW:', err));
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("./service-worker.js")
+            .then((reg) => console.log("SW registrado com sucesso:", reg.scope))
+            .catch((err) => console.error("Falha ao registrar SW:", err));
         });
-    }
-</script>
-</body>
+      }
+    </script>
+
+   
+    
+
+  </body>
 </html>

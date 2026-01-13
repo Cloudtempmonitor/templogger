@@ -531,3 +531,27 @@ function openDeviceDetails(deviceConfig) {
   window.location.href = `device-details.html?mac=${mac}`;
   
 }
+
+function checkInstallOverlay() {
+    const overlay = document.getElementById('desktop-install-overlay');
+    const closeBtn = document.querySelector('.close-overlay');
+    
+    // Se o HTML do modal não estiver nesta página, a função para silenciosamente sem dar erro
+    if (!overlay) return;
+
+    const isDesktop = window.innerWidth > 1024;
+    const isDismissed = localStorage.getItem('installDismissed');
+
+    if (isDesktop && !isDismissed) {
+        overlay.classList.add('active');
+    }
+
+    // O ?. garante que só adiciona o evento se o botão existir
+    closeBtn?.addEventListener('click', () => {
+        overlay.classList.remove('active');
+        localStorage.setItem('installDismissed', 'true');
+    });
+}
+
+// Chame a função
+document.addEventListener('DOMContentLoaded', checkInstallOverlay);
