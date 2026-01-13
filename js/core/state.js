@@ -26,7 +26,7 @@ export function setUser(userData) {
     alarmesAtivos: !!userData.alarmesAtivos,
     chatId: userData.chatId || null,
 
-    // PERMISSÕES: Agora moram dentro do objeto User (Flattened)
+    // PERMISSÕES: Agora estão dentro do objeto User
     acessoInstituicoes: Array.isArray(userData.acessoInstituicoes) ? userData.acessoInstituicoes : [],
     acessoUnidades: Array.isArray(userData.acessoUnidades) ? userData.acessoUnidades : [],
     acessoSetores: Array.isArray(userData.acessoSetores) ? userData.acessoSetores : [],
@@ -98,7 +98,7 @@ export function updateState(partialData) {
   // 1. Mescla os dados no objeto de memória
   state.user = { ...state.user, ...partialData };
   
-  // 2. Sincroniza o LocalStorage (resolve a persistência)
+  // 2. Sincroniza o LocalStorage 
   localStorage.setItem("user", JSON.stringify(state.user));
   
   // 3. Atualiza o nome no menu superior (UI) instantaneamente
