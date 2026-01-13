@@ -1,4 +1,4 @@
-/* login.css - VERSÃO MELHORADA */
+/* login.css */
 
 .login-body {
     display: flex;
@@ -306,7 +306,7 @@
     text-decoration: underline;
 }
 
-/* Modal Styles - COMPLETO E ESTILIZADO */
+/* Modal Styles  */
 .modal-overlay {
     position: fixed;
     top: 0;
