@@ -50,7 +50,7 @@ body {
     display: none; 
     position: fixed;
     bottom: 20px;
-    right: 20px; /* Posicionado à direita */
+    right: 20px; 
     z-index: 10000;
 }
 
@@ -72,7 +72,7 @@ body {
     animation: slideInRight 0.5s ease-out;
 }
 
-/* Ajuste do Logo Imenso (1024px para 60px) */
+/* Ajuste do Logo (1024px para 60px) */
 .install-logo { 
     width: 60px; 
     height: 60px; 
