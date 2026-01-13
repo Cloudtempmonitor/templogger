@@ -41,47 +41,70 @@ body {
 
 
 
+
+
+
+
+/* Container do Modal de Canto */
 .install-overlay {
-    display: none; /* Escondido por padrão */
+    display: none; 
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(5px);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
+    bottom: 20px;
+    right: 20px; /* Posicionado à direita */
+    z-index: 10000;
 }
 
-/* Só mostra em telas maiores que 1024px (Desktop) */
+/* Mostrar apenas em Desktop */
 @media (min-width: 1025px) {
-    .install-overlay.active { display: flex; }
+    .install-overlay.active { display: block; }
 }
 
 .install-card {
     background: #1e293b;
     color: white;
-    padding: 2rem;
-    border-radius: 1.5rem;
-    text-align: center;
-    position: relative;
-    max-width: 400px;
+    padding: 1.2rem;
+    border-radius: 1rem;
+    width: 260px; /* Largura pequena e fixa */
     border: 1px solid #334155;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    position: relative;
+    text-align: center;
+    animation: slideInRight 0.5s ease-out;
+}
+
+/* Ajuste do Logo Imenso (1024px para 60px) */
+.install-logo { 
+    width: 60px; 
+    height: 60px; 
+    object-fit: contain;
+    margin-bottom: 0.5rem; 
+}
+
+.install-card h2 { font-size: 1rem; margin: 5px 0; }
+.install-card p { font-size: 0.8rem; color: #94a3b8; line-height: 1.2; }
+
+.qr-code-container {
+    background: white;
+    padding: 8px;
+    display: inline-block;
+    border-radius: 0.5rem;
+    margin: 10px 0;
+}
+
+.qr-code-container img {
+    width: 120px; /* QR Code menor */
+    height: 120px;
+    display: block;
 }
 
 .close-overlay {
     position: absolute;
-    top: 1rem; right: 1.5rem;
+    top: 5px; right: 10px;
     background: none; border: none;
-    color: #94a3b8; font-size: 2rem; cursor: pointer;
+    color: #94a3b8; font-size: 1.5rem; cursor: pointer;
 }
 
-.install-logo { width: 80px; margin-bottom: 1rem; }
-.qr-code-container {
-    background: white;
-    padding: 1rem;
-    display: inline-block;
-    border-radius: 1rem;
-    margin: 1.5rem 0;
+@keyframes slideInRight {
+    from { transform: translateX(110%); }
+    to { transform: translateX(0); }
 }
-.scan-label { display: block; font-size: 0.85rem; color: #94a3b8; }

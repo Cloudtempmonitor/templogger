@@ -5,7 +5,21 @@
 /* ==========================================================================
    Botões Principais
    ========================================================================== */
-.btn-primary,
+
+.btn, .btn-primary, .btn-success {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    text-decoration: none;
+}
+
+   .btn-primary,
 .admin-button-new {
     background: linear-gradient(135deg, var(--cor-destaque-azul, #3498db), #2980b9);
     color: white;
@@ -93,6 +107,7 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
 }
+
 
 /* ==========================================================================
    Botões de Ação na Tabela/Lista (ícones)

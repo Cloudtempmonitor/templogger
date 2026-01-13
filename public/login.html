@@ -1,57 +1,114 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta name="theme-color" content="#3b82f6">
-<link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./img/icon-192.png">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login - Temp Monitor</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- CSS -->
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/notifications.css">
-  <link rel="stylesheet" href="../css/login.css">
-  <link rel="stylesheet" href="../css/buttons.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Temp Monitor</title>
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="description" content="Sistema de monitoramento de temperatura">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./img/icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/notifications.css">
+    <link rel="stylesheet" href="../css/login.css">
+    <link rel="stylesheet" href="../css/buttons.css">
 </head>
+
 <body class="login-body">
+    <div class="login-wrapper">
+        <div class="login-header" role="banner">
+            <img src="../assets/logo.png" alt="Logo Cloud Temp Monitor" class="login-logo-img">
+            <div class="login-title">Cloud Temp Monitor</div>
+            <p class="login-subtitle">Sistema de monitoramento em tempo real</p>
+        </div>
 
-  <div class="login-title">Gerenciador de Temperaturas</div>
-
-  <div class="login-container">
-    <h2>Login</h2>
-    <input type="email" id="email" placeholder="Email" autocomplete="username" required />
-    <input type="password" id="senha" placeholder="Senha" autocomplete="current-password" required />
-    <button class="btn login-btn" id="login-btn">Entrar</button>
-  </div>
-
-  <!-- Modal de Seleção de Instituição -->
-  <div class="modal-overlay" id="modal-overlay"></div>
-  <div class="modal" id="institution-modal">
-    <h3>Selecione a Instituição</h3>
-    <p>Você tem acesso a múltiplas instituições. Escolha uma para continuar:</p>
-    <select id="institution-list"></select>
-    <div class="modal-actions">
-      <button class="btn login-btn" id="modal-confirm-btn">Confirmar</button>
+        <main class="login-main" role="main">
+            <div class="login-container">
+                <h2 class="login-heading">Acesse sua conta</h2>
+                
+                <form id="login-form" class="login-form" novalidate>
+                    <div class="input-group">
+                        <label for="email" class="sr-only">Email</label>
+                        <i class="fa fa-envelope input-icon" aria-hidden="true"></i>
+                        <input type="email" id="email" class="form-input" 
+                               placeholder="Email" required 
+                               autocomplete="email"
+                               aria-describedby="email-hint" />
+                        <div class="input-hint" id="email-hint">Digite seu email cadastrado</div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="senha" class="sr-only">Senha</label>
+                        <i class="fa fa-lock input-icon" aria-hidden="true"></i>
+                        <input type="password" id="senha" class="form-input" 
+                               placeholder="Senha" required 
+                               autocomplete="current-password"
+                               aria-describedby="password-hint" />
+                        <button type="button" class="toggle-password" id="toggle-password" aria-label="Mostrar senha">
+                            <i class="fa fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="login-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="remember-me">
+                            <span>Lembrar-me</span>
+                        </label>
+                        <a href="#" class="forgot-password" tabindex="0">Esqueci a senha</a>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary login-submit" id="login-btn" aria-live="polite">
+                        <span class="btn-text">Entrar</span>
+                        <span class="btn-loader" aria-hidden="true">
+                            <i class="fa fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+                </form>
+                
+               
+            </div>
+        </main>
     </div>
-  </div>
 
-  <!-- JS da página -->
-  <script type="module" src="../js/pages/login.js"></script>
-  <!-- NÃO importe auth.js aqui! -->
+    <!-- Modal de Instituições -->
+    <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc">
+        <div class="modal" id="institution-modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Selecione a Instituição</h3>
+                <button class="modal-close" id="modal-close" aria-label="Fechar">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <p id="modal-desc">Escolha a unidade que deseja monitorar agora:</p>
+                
+                <div class="select-wrapper">
+                    <i class="fa fa-building select-icon"></i>
+                    <select id="institution-list" class="modal-select" aria-label="Lista de instituições">
+                        <option value="">Selecione uma instituição...</option>
+                    </select>
+                    <i class="fa fa-chevron-down select-arrow"></i>
+                </div>
+                
+                <div class="institution-info" id="institution-info">
+                    <i class="fa fa-info-circle"></i>
+                    <span>Você tem acesso a <span id="institution-count">0</span> instituição(ões)</span>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-secondary" id="modal-cancel-btn">Cancelar</button>
+                <button class="btn-primary" id="modal-confirm-btn" disabled>
+                    Confirmar <i class="fa fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./service-worker.js')
-                .then(reg => console.log('SW registrado com sucesso:', reg.scope))
-                .catch(err => console.error('Falha ao registrar SW:', err));
-        });
-    }
-</script>
+    <script type="module" src="../js/pages/login.js"></script>
 </body>
 </html>

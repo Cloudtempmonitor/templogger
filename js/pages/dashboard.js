@@ -534,25 +534,26 @@ function openDeviceDetails(deviceConfig) {
 
 
 function checkInstallOverlay() {
-    const overlay = document.getElementById('desktop-install-overlay');
-    const closeBtn = document.querySelector('.close-overlay');
-    
-    // Se o HTML do modal não estiver nesta página, a função para silenciosamente sem dar erro
-    if (!overlay) return;
+    const lastTime = localStorage.getItem('pwa_prompt_timestamp');
+    const agora = new Date().getTime();
+    const umDia = 24 * 60 * 60 * 1000;
 
-    const isDesktop = window.innerWidth > 1024;
-    const isDismissed = localStorage.getItem('installDismissed');
+    // Se já instalou, não faz nada
+    if (window.matchMedia('(display-mode: standalone)').matches) return;
 
-    if (isDesktop && !isDismissed) {
-        overlay.classList.add('active');
+    // Só mostra se for Desktop e se passou mais de 24h desde o último "fechar"
+    if (window.innerWidth > 1024 && (!lastTime || (agora - lastTime > umDia))) {
+        setTimeout(() => {
+            document.getElementById('desktop-install-overlay').style.display = 'block';
+        }, 8000); // 8 segundos de espera
     }
-
-    // O ?. garante que só adiciona o evento se o botão existir
-    closeBtn?.addEventListener('click', () => {
-        overlay.classList.remove('active');
-        localStorage.setItem('installDismissed', 'true');
-    });
 }
+
+// Ao clicar em fechar
+document.querySelector('.close-overlay').addEventListener('click', () => {
+    document.getElementById('desktop-install-overlay').style.display = 'none';
+    localStorage.setItem('pwa_prompt_timestamp', new Date().getTime());
+});
 
 // Chame a função
 document.addEventListener('DOMContentLoaded', checkInstallOverlay);
