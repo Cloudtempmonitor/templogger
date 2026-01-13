@@ -12,7 +12,7 @@ import {
     getDocs,
     doc,
     getDoc,
-    limit // <--- Essencial para a verificação ser rápida e barata
+    limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // =========================================================================
@@ -21,7 +21,7 @@ import {
 
 /**
  * Verifica se existe algum dispositivo vinculado a um ID específico da hierarquia.
- * Usa limit(1) para economizar leitura: paramos de buscar assim que achamos o primeiro.
+ * Usa limit(1) para economizar leitura: para de buscar assim que acha o primeiro.
  * * @param {string} fieldName - O campo a verificar ('instituicaoId', 'unidadeId' ou 'setorId')
  * @param {string} id - O ID que está sendo excluído
  * @returns {Promise<boolean>} - True se houver dispositivos vinculados
@@ -62,7 +62,6 @@ export async function hasLinkedDevices(fieldName, id) {
 // =========================================================================
 
 export async function getReadingsByRange(deviceId, startTime, endTime) {
-    // Nota: Futuramente adicionar validação de permissão aqui se necessário
     const q = query(
         collection(db, "dispositivos", deviceId, "leituras"),
         where("timestamp", ">=", startTime),
