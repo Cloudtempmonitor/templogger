@@ -12,7 +12,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { showNotification} from "../ui/notifications.js";
-import { requestNotificationPermission } from "../services/push-notification.js";
+import { requestNotificationPermission, listenToForegroundMessages } from "../services/push-notification.js";
+
 // Variáveis globais
 let allDevicesConfig = {};
 let deviceCards = {};
@@ -41,18 +42,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Escuta o evento do auth.js
     window.addEventListener("userReady", () => {
-      const userFresh = getUser();
-      initDashboard();
-      if (userFresh && userFresh.uid) {
-          requestNotificationPermission(userFresh.uid);
-      }
-
+     initDashboard();
     });
   }
 });
 
 async function initDashboard() {
   const user = getUser();
+   requestNotificationPermission(user.uid);
+   listenToForegroundMessages();
   if (!user) return;
   clearAllListeners();
   const institution = getActiveInstitution();

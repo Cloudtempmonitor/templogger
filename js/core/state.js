@@ -25,6 +25,7 @@ export function setUser(userData) {
     ativo: userData.ativo !== false,
     alarmesAtivos: !!userData.alarmesAtivos,
     chatId: userData.chatId || null,
+    fcmTokens: Array.isArray(userData.fcmTokens) ? userData.fcmTokens : [],
 
     // PERMISSÕES: Agora estão dentro do objeto User
     acessoInstituicoes: Array.isArray(userData.acessoInstituicoes) ? userData.acessoInstituicoes : [],

@@ -3,15 +3,21 @@
 import { db, messaging } from "./firebase.js";
 import { doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-
+import { onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 // IMPORTANTE: Gere sua chave VAPID no Console do Firebase:
 // Configurações do Projeto > Cloud Messaging > Web Push (botão "Generate Key pair")
 // Copie a chave longa que aparecer lá e cole abaixo:
 const VAPID_KEY = "BLNp-LcDo57ZWUR7BsbWZ6BuPjVRuuiMrexFQ8emJAx1tOGalPhej9yKm-ibFgx4w2l8HorT6nm-r8NAw--cW8o"; 
 
 export async function requestNotificationPermission(userId) {
-    if (!userId) return;
+    // 🔍 DEBUG: Vamos ver o que está chegando aqui
+    console.log("🚀 [Push] requestNotificationPermission chamada.");
+    console.log("👤 [Push] userId recebido:", userId);
 
+    if (!userId) {
+        console.error("❌ [Push] ABORTADO: userId é nulo ou indefinido!");
+        return;
+    }
     try {
         // 1. Pede permissão ao navegador
         const permission = await Notification.requestPermission();
@@ -46,4 +52,23 @@ export async function requestNotificationPermission(userId) {
     } catch (error) {
         console.error("❌ Erro ao configurar notificações:", error);
     }
+}
+
+
+export function listenToForegroundMessages() {
+    console.log("👂 Iniciando escuta de mensagens em primeiro plano...");
+    
+    onMessage(messaging, (payload) => {
+        console.log('🚨 Mensagem recebida com o site aberto:', payload);
+        
+        // Tenta tocar um som de alerta (opcional)
+        // const audio = new Audio('/sons/alerta.mp3');
+        // audio.play().catch(e => console.log("Navegador bloqueou o som automático"));
+
+        // Cria um alerta visual simples no navegador
+        const titulo = payload.notification.title || "Alarme!";
+        const corpo = payload.notification.body || "Verifique o painel.";
+        
+        alert(`${titulo}\n\n${corpo}`);
+    });
 }
