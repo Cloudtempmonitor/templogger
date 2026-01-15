@@ -28,9 +28,19 @@ const contentArea = document.getElementById("admin-content-area");
 const loadingEl = document.getElementById("hierarchy-loading");
 const contentEl = document.getElementById("hierarchy-content");
 
-/* ==========================================================================
-   FUNÇÃO PRINCIPAL
-   ========================================================================== */
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    const user = getUser();
+    if (user) {
+        adminHierarchy();
+    } else {
+        window.addEventListener("userReady", () => {
+            adminHierarchy();
+        });
+    }
+});
+
 
 export async function adminHierarchy() {
     try {
@@ -177,6 +187,7 @@ async function showHierarchyView() {
 function renderInstituicoes() {
     const list = document.getElementById("inst-list");
     const countEl = document.getElementById("inst-count");
+    // O ID do botão de adicionar instituição (verifique se é este mesmo no seu HTML)
     const btnAdd = document.getElementById("add-new-inst") || document.getElementById("btn-add-inst"); 
 
     if (!list || !countEl) return;
@@ -238,7 +249,7 @@ function renderInstituicoes() {
              li.classList.add("active");
         }
 
-        // Botões de ação apenas para SuperAdmin
+        // MUDANÇA: Botões de ação apenas para SuperAdmin
         const actionsHtml = hasRole(ROLES.SUPER_ADMIN) ? 
             `<div class="item-actions">
                 <button class="edit-btn" data-id="${inst.id}" title="Editar">
@@ -277,9 +288,11 @@ function renderInstituicoes() {
             currentSelectedInstId = inst.id;
             currentSelectedUnitId = null; // Reseta a unidade selecionada
 
-            // Mostra botão de adicionar unidade (Se não for SuperAdmin)
+            // Mostra botão de adicionar unidade (Se não for SuperAdmin, talvez queira checar permissão aqui também)
             const addUnitBtn = document.getElementById("add-new-unit");
             if (addUnitBtn) {
+                // Admin pode adicionar unidade? Se sim, mostre. 
+                // Se a regra for "Admin edita o que tem dentro", então block.
                 addUnitBtn.style.display = "block"; 
             }
 
@@ -777,7 +790,7 @@ async function saveHierarchyItem(type, docId, closeModal, formRef) {
     const currentUser = getUser();
     if (!currentUser) return;
 
-    // Definir o contexto de busca (Formulário ou Documento)
+    // CORREÇÃO 3: Definir o contexto de busca (Formulário ou Documento)
     const context = formRef || document;
 
     // Buscar botões dentro do contexto correto
@@ -789,7 +802,7 @@ async function saveHierarchyItem(type, docId, closeModal, formRef) {
         saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
     }
 
-    // Usar context.querySelector em vez de document.getElementById
+    // CORREÇÃO 4: Usar context.querySelector em vez de document.getElementById
     // Isso garante que pegamos o valor do modal ATUAL
     const nomeInput = context.querySelector("#nome");
     const nome = nomeInput ? nomeInput.value.trim() : "";
@@ -973,7 +986,7 @@ async function deleteHierarchyItem(type, docId, itemName, closeModal) {
     // 5. EXECUÇÃO (Se chegou aqui, está livre para apagar)
     // =================================================================================
 
-    // Mensagem de confirmação simples
+    // Constrói mensagem de confirmação simples
     const confirmationMessage = `Tem certeza que deseja excluir ${type} "${itemName}"?<br><br>` +
         `<small>Este item não possui dispositivos nem sub-itens vinculados.</small>`;
 
@@ -1022,6 +1035,7 @@ async function deleteHierarchyItem(type, docId, itemName, closeModal) {
         console.log("config-hierarchy: inicializado com sucesso");
     } catch (error) {
         console.error("config-hierarchy: erro na auto-inicialização:", error);
+        // Opcional: mostrar erro na tela
         const contentArea = document.getElementById("admin-content-area");
         if (contentArea) {
             contentArea.innerHTML = `
