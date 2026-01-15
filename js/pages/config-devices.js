@@ -1,5 +1,5 @@
 // ==========================================================================
-// CONFIG-DEVICES.JS 
+// CONFIG-DEVICES.JS — Versão Final (Correção de Selects + CSS + Modal)
 // ==========================================================================
 
 import { db } from "../services/firebase.js";
@@ -18,12 +18,25 @@ let deviceManagementFilter = null;
 const contentArea = document.getElementById("devices-content");
 const loadingArea = document.getElementById("devices-loading");
 
-document.addEventListener("DOMContentLoaded", initPage);
+document.addEventListener("DOMContentLoaded", () => {
+    const user = getUser();
+    
+    if (user) {
+        initPage();
+    } else {
+        console.log("[Devices] Aguardando autenticação...");
+        window.addEventListener("userReady", () => {
+            console.log("[Devices] Usuário confirmado via evento.");
+            initPage();
+        });
+    }
+});
+
 
 async function initPage() {
     try {
         currentUser = getUser();
-        if (!currentUser) { window.location.href = "../index.html"; return; }
+        if (!currentUser) return;
         
         // Carrega a hierarquia (O Service já filtra o que o usuário pode ver)
         hierarchyCache = await loadHierarchyCache();
@@ -187,7 +200,7 @@ function renderDevicesGrid(devices) {
   `;
 }
 
-// === MODAL DO DISPOSITIVO ===
+// === MODAL AJUSTADO (SEM DELETE + AVANÇADO) ===
 async function openDeviceModal(deviceId) {
     let device = {};
     if (deviceId) {
@@ -308,7 +321,7 @@ async function openDeviceModal(deviceId) {
     `;
 
     document.body.appendChild(modalOverlay);
-    setupHierarchySelects(device); 
+    setupHierarchySelects(device); // Função corrigida abaixo
 
     const closeModal = () => { if(document.body.contains(modalOverlay)) modalOverlay.remove(); };
     modalOverlay.querySelector('.admin-button-cancel').addEventListener('click', closeModal);
