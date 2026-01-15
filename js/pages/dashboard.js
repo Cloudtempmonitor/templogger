@@ -41,8 +41,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Escuta o evento do auth.js
     window.addEventListener("userReady", () => {
+      const userFresh = getUser();
       initDashboard();
-      requestNotificationPermission(user.uid);
+      if (userFresh && userFresh.uid) {
+          requestNotificationPermission(userFresh.uid);
+      }
 
     });
   }
