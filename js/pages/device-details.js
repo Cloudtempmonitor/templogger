@@ -1,15 +1,10 @@
-//js/pages/deviceDetails/device-details.js
+//js/pages/device-details.js
 
 import { auth, db } from "../services/firebase.js";
-
-// Importa funções do Firestore
 import { collection, doc, getDoc, getDocs, onSnapshot, query, where, orderBy, startAt, endAt, Timestamp} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-// Importa funções específicas do Auth
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { showNotification, showConfirmation } from "../ui/notifications.js";
 import { formatDate, formatTime, formatDuration} from "../utils/formatters.js";
-
+import { getUser } from "../core/state.js";
 
 /* ==========================================================================
    1. VARIÁVEIS GLOBAIS, CONSTANTES E ESTADO
@@ -24,29 +19,42 @@ const OFFLINE_THRESHOLD_SECONDS = 120;
 /* ==========================================================================
    2. INICIALIZAÇÃO E AUTH
    ========================================================================== */
-
-onAuthStateChanged(auth, (user) => {
-    if (!user) {
-        window.location.href = "login.html";
+// 2. Inicialização Padronizada (Padrão "Espera a porta abrir")
+document.addEventListener("DOMContentLoaded", () => {
+    const user = getUser();
+    if (user) {
+        initDeviceDetails();
     } else {
-        loadUserData(user.uid);
-        currentMac = new URLSearchParams(window.location.search).get("mac");
-        
-        if (!currentMac) {
-            showNotification("Dispositivo não especificado.", "error");
-            window.location.href = "index.html";
-        }
-
-        //INICIA OS LISTENERS EM TEMPO REAL
-        listenToDeviceStatus(currentMac);
-        listenToAlarmStatus(currentMac);
-
-        //INICIA OS FILTROS (Gráfico e Histórico)
-        initializeFilters();
+        // Se o user for null, esperamos o AuthGuard confirmar o login
+        window.addEventListener("userReady", () => {
+            initDeviceDetails();
+        });
     }
 });
 
+// Função Principal de Inicialização
+async function initDeviceDetails() {
+    const user = getUser();
+    if (!user) return; // Se falhar, o AuthGuard já redirecionou
 
+    currentMac = new URLSearchParams(window.location.search).get("mac");
+
+    // Validação
+    if (!currentMac) {
+        showNotification("Dispositivo não especificado.", "error");
+        setTimeout(() => window.location.href = "./index.html", 2000); 
+        return;
+    }
+
+    console.log(`Iniciando monitoramento para: ${currentMac}`);
+
+    // INICIA OS LISTENERS EM TEMPO REAL
+    if (typeof listenToDeviceStatus === 'function') listenToDeviceStatus(currentMac);
+    if (typeof listenToAlarmStatus === 'function') listenToAlarmStatus(currentMac);
+
+    // INICIA OS FILTROS
+    if (typeof initializeFilters === 'function') initializeFilters();
+}
 
 
 
@@ -148,7 +156,7 @@ async function fetchAlarmEvents(startTimeStamp, endTimeStamp) {
       alarmEvents.push({
         id: doc.id,
         ...eventData,
-        // Converte de volta para timestamp Unix
+        // Converte de volta para timestamp Unix se necessário
         startTimestamp: eventData.startTime?.toMillis() / 1000,
         endTimestamp: eventData.endTime?.toMillis() / 1000,
       });
@@ -291,7 +299,7 @@ function listenToAlarmStatus(mac) {
                 statusDetail.textContent = "Operando dentro dos limites";
             }
         } else {
-            // Se o doc não existe, mas estamos ONLINE, significa status NORMAL.
+            // Se o doc não existe, mas está ONLINE, significa status NORMAL.
             statusBox.className = "status-box normal";
             statusText.textContent = "NORMAL";
             statusDetail.textContent = "Operando dentro dos limites";
@@ -376,7 +384,7 @@ function renderChart(readings) {
 }
 
 
-// Lê o período do flatpickr e chama o fetchData.
+// * (Controlador) Lê o período do flatpickr e chama o fetchData.
 async function updateChartData() {
   if (!currentMac || !flatpickrInstance) return;
 
@@ -601,15 +609,13 @@ function renderAlarmHistory(alarmEvents, deviceConfig = {}) {
 function initializeFilters() {
   // Configura o calendário (flatpickr)
   flatpickrInstance = flatpickr("#date-range-picker", {
-    mode: "range", // Ativa o modo de período
-    enableTime: true, // Permite selecionar hora e minuto
-    dateFormat: "d/m/y H:i", // Formato brasileiro
-    locale: "pt", // Traduz para português
-    defaultHour: 0, // HORA PADRÃO: 00:00 (meia-noite)
-    defaultMinute: 0, //MINUTO PADRÃO: 00:00
-    // Função chamada QUANDO O USUÁRIO muda a data manualmente
+    mode: "range", 
+    enableTime: true, 
+    dateFormat: "d/m/y H:i", 
+    locale: "pt", 
+    defaultHour: 0, 
+    defaultMinute: 0, 
     onChange: function (selectedDates, dateStr, instance) {
-      // Se o usuário selecionou um range, marca o dropdown como "custom"
       if (selectedDates.length === 2) {
         document.getElementById("time-filter").value = "custom";
       }
