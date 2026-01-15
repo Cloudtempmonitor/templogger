@@ -12,7 +12,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { showNotification} from "../ui/notifications.js";
-
+import { requestNotificationPermission } from "../services/push-notification.js";
 // Variáveis globais
 let allDevicesConfig = {};
 let deviceCards = {};
@@ -33,6 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (user) {
     console.log("Usuário carregado do cache local:", user.email);
     initDashboard();
+    
   }
   // Cenário 2: Usuário null, mas pode ser delay do Firebase.
   else {
@@ -41,6 +42,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Escuta o evento do auth.js
     window.addEventListener("userReady", () => {
       initDashboard();
+      requestNotificationPermission(user.uid);
+
     });
   }
 });
