@@ -13,6 +13,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciar Hierarquia - TempTracker</title>
     
+    <link rel="shortcut icon" href="./img/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="./img/favicon.png" type="image/png">
     <!-- Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -24,7 +26,7 @@
     <link rel="stylesheet" href="../css/buttons.css">
     
     <style>
-        /* Loading inicial */
+        /* Loading inicial (igual ao config-users) */
         .loader {
             margin: 30px auto;
             width: 40px;
@@ -43,7 +45,7 @@
 </head>
 <body>
 
-    <!-- Menu injetado aqui -->
+    <!-- Menu será injetado aqui -->
     <div id="menu-container"></div>
 
     <main class="admin-container">
@@ -55,16 +57,17 @@
 
         <!-- Área de conteúdo principal -->
         <section class="admin-content-card" id="admin-content-area">
-            <!-- Estado de loading -->
+            <!-- Estado de loading (será substituído pelo conteúdo) -->
             <div id="hierarchy-loading" style="text-align:center; padding: 40px;">
                 <p style="color:#64748b; font-size:1rem; margin-bottom:15px;">Carregando estrutura...</p>
                 <div class="loader"></div>
             </div>
             
-            <!-- Conteúdo real  -->
+            <!-- Conteúdo real (inicialmente escondido) -->
             <div id="hierarchy-content" style="display: none;">
                 <!-- Botões de ação principais -->
                 <div class="hierarchy-actions">
+                    <!-- Botão será adicionado via JS para superAdmin -->
                 </div>
                 
                 <!-- Container das 3 colunas -->
@@ -127,6 +130,7 @@
     </main>
 
     <!-- Scripts do Sistema -->
+     <script type="module" src="../js/core/auth.js"></script>
     <script type="module" src="../js/ui/menu.js"></script>
     <script type="module" src="../js/pages/config-hierarchy.js"></script>
 
