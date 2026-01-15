@@ -1,5 +1,4 @@
-// js/pages/dashboard.js — Carrega dashboard com hierarquia vertical e cards horizontais
-
+// js/pages/dashboard.js 
 import { getUser, getActiveInstitution } from "../core/state.js";
 import { auth, db } from "../services/firebase.js";
 import {
@@ -14,7 +13,7 @@ import {
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { showNotification} from "../ui/notifications.js";
 
-// Variáveis globais 
+// Variáveis globais
 let allDevicesConfig = {};
 let deviceCards = {};
 let deviceStatus = {};
@@ -24,6 +23,7 @@ let alarmListeners = {};
 let activeAlarms = new Set();
 let lastValidReadings = {};
 const OFFLINE_THRESHOLD_SECONDS = 200;  
+
 
 // Init: Após auth, carrega dados
 document.addEventListener("DOMContentLoaded", async () => {
@@ -35,25 +35,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     initDashboard();
   }
   // Cenário 2: Usuário null, mas pode ser delay do Firebase.
-  // NÃO REDIRECIONE AINDA. Espere o AuthGuard.
   else {
     console.log("Aguardando autenticação (AuthGuard)...");
 
-    // Escuta o evento que você criou no auth.js
+    // Escuta o evento do auth.js
     window.addEventListener("userReady", () => {
-      console.log("AuthGuard confirmou usuário. Iniciando dashboard.");
       initDashboard();
     });
-    // O AuthGuard (auth.js) já vai redirecionar pro login se falhar, 
   }
 });
+
 async function initDashboard() {
   const user = getUser();
   if (!user) return;
-
+  clearAllListeners();
   const institution = getActiveInstitution();
 
   if (!institution || !institution.id) {
+    console.log("Nenhuma instituição ativa. Tentando definir automaticamente...");
     showNotification(
       "Nenhuma instituição selecionada. Redirecionando...",
       "info"
@@ -62,7 +61,6 @@ async function initDashboard() {
     return;
   }
 
-  // 🔑 Usar APENAS o ID para lógica e Firestore
   const uiTree = await buildUiTree(institution.id);
   renderDashboard(uiTree);
 
@@ -94,10 +92,9 @@ async function buildUiTree(instId) {
   // Se não tiver unidades, retorna logo
   if (unitsSnapshot.empty) return result;
 
-  // 3. Busca TODOS os setores dessas unidades (Otimização: Buscar por unidade no loop)
-  // Para sistema muito grande, mudar para buscar tudo de uma vez.
+  // 3. Busca TODOS os setores dessas unidades 
 
-  // Buscar também TODOS os dispositivos da instituição de uma vez para não fazer milhares de leituras
+  // Vamos buscar também TODOS os dispositivos da instituição de uma vez para não fazer milhares de leituras
   const devicesQuery = query(
     collection(db, "dispositivos"),
     where("instituicaoID", "==", instId)
@@ -159,10 +156,33 @@ async function buildUiTree(instId) {
     result.unidades.push(unidadeObj);
   }
 
-  // Ordena unidades por nome (opcional)
+  // Ordena unidades por nome 
   result.unidades.sort((a, b) => a.nome.localeCompare(b.nome));
 
   return result;
+}
+
+// Função para iniciar o listener em tempo real para um dispositivo
+function startDeviceListener(mac) {
+  if (deviceListeners[mac]) return;
+
+  const unsubscribe = onSnapshot(doc(db, "dispositivos", mac), (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+
+      allDevicesConfig[mac] = { ...allDevicesConfig[mac], ...data };
+
+      checkDeviceStatus(mac);
+
+      if (deviceCards[mac]) {
+        updateCardContent(deviceCards[mac], mac);
+      }
+    }
+  }, (error) => {
+    console.error(`Erro ao escutar dispositivo ${mac}:`, error);
+  });
+
+  deviceListeners[mac] = unsubscribe;
 }
 
 // Renderiza o dashboard com hierarquia vertical e cards horizontais
@@ -184,12 +204,12 @@ function renderDashboard(uiTree) {
   }
 
   uiTree.unidades.forEach((unidade) => {
-    // Filtra apenas setores que possuem dispositivos
+    // 🔍 Filtra apenas setores que possuem dispositivos
     const setoresComDispositivos = (unidade.setores || []).filter(
       (setor) => setor.dispositivos && setor.dispositivos.length > 0
     );
 
-    //  Se a unidade não tiver nenhum setor com dispositivos, ignora
+    // 🚫 Se a unidade não tiver nenhum setor com dispositivos, ignora
     if (setoresComDispositivos.length === 0) return;
 
     // Cria a Unidade
@@ -223,7 +243,10 @@ function renderDashboard(uiTree) {
         deviceCards[deviceConfig.mac] = cardEl;
 
         renderDeviceCard({ ...deviceConfig, setorNome: setor.nome }, null);
+        startDeviceListener(deviceConfig.mac);
       });
+
+      
 
       sectorSection.appendChild(sectorCardsContainer);
       unitSection.appendChild(sectorSection);
@@ -253,12 +276,11 @@ function renderDeviceCard(deviceConfig, data) {
     }
   }
 
-  // 2. Valores Padrão (se data for null, é o carregamento inicial)
   let mainValue = "--";
   let humidityValue = "--";
   let timestampText = "Aguardando dados...";
   let status = "OFFLINE";
-  let mainColor = "#2c3e50"; // Cor padrão (cinza escuro)
+  let mainColor = "#2c3e50"; 
   let badgeClass = "status-offline";
   let isAlarm = false;
 
@@ -300,19 +322,16 @@ function renderDeviceCard(deviceConfig, data) {
 
     if (!isNaN(tempVal)) {
       if (tempVal < min || tempVal > max) {
-        mainColor = "#e74c3c"; // Vermelho (Alarme)
+        mainColor = "#e74c3c"; 
         isAlarm = true;
-        // Adiciona classe de borda piscante no container principal
         cardElement.classList.add("in-alarm");
       } else {
         mainColor = "#27ae60"; // Verde (Normal)
-        // Remove alarme se voltou ao normal
         cardElement.classList.remove("in-alarm");
       }
     }
   }
 
-  // 5. Monta o HTML interno
   const setorDisplay = deviceConfig.setorNome || "Setor";
 
   cardElement.innerHTML = `
@@ -517,6 +536,15 @@ function updateCardContent(cardElement, mac) {
 }
 
 
+function clearAllListeners() {
+  Object.keys(deviceListeners).forEach(mac => {
+    if (deviceListeners[mac]) {
+      deviceListeners[mac](); 
+      delete deviceListeners[mac];
+    }
+  });
+}
+
 //Função que direcionar para a página de detalhes do dispositivo clicado
 function openDeviceDetails(deviceConfig) {
   const mac = deviceConfig.mac;
@@ -543,7 +571,7 @@ function checkInstallOverlay() {
     if (window.innerWidth > 1024 && (!lastTime || (agora - lastTime > umDia))) {
         setTimeout(() => {
             document.getElementById('desktop-install-overlay').style.display = 'block';
-        }, 8000); // 8 segundos de espera
+        }, 3000); 
     }
 }
 
@@ -594,7 +622,7 @@ function showInstallButton() {
     <span style="font-size: 20px;">📱</span>
     <div style="text-align: left;">
       <div style="font-weight: bold; font-size: 14px;">Instalar App</div>
-      <div style="font-size: 11px; opacity: 0.8;">Acesso rápido aos treinamentos</div>
+      <div style="font-size: 11px; opacity: 0.8;">Acesse aos dispositivos pelo celular</div>
     </div>
     <span style="margin-left: auto;">↓</span>
   `;
