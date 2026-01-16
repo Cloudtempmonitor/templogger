@@ -1,5 +1,6 @@
 // js/pages/dashboard.js 
 import { getUser, getActiveInstitution } from "../core/state.js";
+import { getFriendlyAlarmMessage} from "../utils/helpers.js";
 import { auth, db } from "../services/firebase.js";
 import {
   doc,
@@ -248,6 +249,7 @@ function renderDashboard(uiTree) {
 
         renderDeviceCard({ ...deviceConfig, setorNome: setor.nome }, null);
         startDeviceListener(deviceConfig.mac);
+        startAlarmListener(deviceConfig.mac);
       });
 
       
@@ -411,12 +413,11 @@ function updateCardContent(cardElement, mac) {
   const deviceConfig = allDevicesConfig[mac];
   const currentReading = deviceConfig.ultimasLeituras;
   const status = deviceStatus[mac] || "OFFLINE";
-  const alarmState = deviceAlarmStatus[mac] || { ativo: false, tipo: "Nenhum" };
-  const isAlarm = alarmState.ativo === true;
 
-  cardElement.classList.toggle("in-alarm", isAlarm);
+  const alarm = deviceAlarmStatus[mac] || { ativo: false, tipo: "Nenhum" };
+    const isAlarm = alarm.ativo === true;
 
-  const isSondaAtiva = deviceConfig.sondaAtiva === true;
+    const isSondaAtiva = deviceConfig.sondaAtiva === true;
   let mainValue = "N/A";
   let ambientTempValue = "N/A";
   let humidityValue = "N/A";
@@ -431,6 +432,19 @@ function updateCardContent(cardElement, mac) {
   let horaTexto = "--:--";
   let timestampLabel = "Última leitura:";
 
+
+
+    if (isAlarm) {
+        mainColor = "#e74c3c";     // vermelho
+        
+    } else if (status !== "ONLINE") {
+        mainColor = "#95a5a6";     // cinza offline
+    }
+
+
+  cardElement.classList.toggle("in-alarm", isAlarm);
+
+  
   if (
     status === "ONLINE" &&
     currentReading &&
@@ -553,12 +567,12 @@ if (badgeEl) {
 
 
 function clearAllListeners() {
-  Object.keys(deviceListeners).forEach(mac => {
-    if (deviceListeners[mac]) {
-      deviceListeners[mac](); 
-      delete deviceListeners[mac];
-    }
-  });
+    Object.values(deviceListeners).forEach(unsub => unsub && unsub());
+    Object.values(alarmListeners).forEach(unsub => unsub && unsub());
+    
+    deviceListeners = {};
+    alarmListeners = {};
+    activeAlarms.clear();
 }
 
 //Função que direcionar para a página de detalhes do dispositivo clicado
@@ -744,6 +758,56 @@ async function installPWA() {
   }
 }
 
+//Função para identificar confição de alarme
+function startAlarmListener(mac) {
+    if (alarmListeners[mac]) return; // evita duplicatas
+
+    const alarmRef = doc(db, "dispositivos", mac, "eventos", "estadoAlarmeAtual");
+
+    const unsubscribe = onSnapshot(alarmRef, (snap) => {
+        let alarmData = { ativo: false, tipo: "Nenhum" };
+
+        if (snap.exists()) {
+            const data = snap.data();
+            alarmData = data?.estadoAlarmeAtual || alarmData;
+        }
+
+        deviceAlarmStatus[mac] = alarmData;
+
+        // Opcional: notificação toast quando entra em alarme
+        const wasActive = activeAlarms.has(mac);
+        const isNowActive = alarmData.ativo === true;
+
+        if (isNowActive && !wasActive && deviceStatus[mac] === "ONLINE") {
+            const config = allDevicesConfig[mac];
+            if (config) {
+                const message = getFriendlyAlarmMessage(alarmData.tipo);
+                showNotification(
+                    `Alarme em ${config.nomeDispositivo || mac}: ${message}`,
+                    "error",
+                    "Atenção",
+                    8000
+                );
+                activeAlarms.add(mac);
+            }
+        } else if (!isNowActive && wasActive) {
+            activeAlarms.delete(mac);
+        }
+
+        // Atualiza o card visualmente
+        if (deviceCards[mac]) {
+            updateCardContent(deviceCards[mac], mac);
+        }
+    }, (err) => {
+        console.error(`Erro no listener de alarme ${mac}:`, err);
+        deviceAlarmStatus[mac] = { ativo: false, tipo: "Nenhum" };
+        activeAlarms.delete(mac);
+        if (deviceCards[mac]) updateCardContent(deviceCards[mac], mac);
+    });
+
+    alarmListeners[mac] = unsubscribe;
+}
+
 // 4. Função para esconder o botão
 function hideInstallButton() {
   if (installButton && document.body.contains(installButton)) {
@@ -796,16 +860,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
 // CORREÇÃO MOBILE: RECONEXÃO AO VOLTAR O FOCO
 // =========================================================================
+// Reconexão agressiva ao voltar para foreground (muito importante em PWA/mobile)
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    console.log("📱 App acordou! Iniciando ressincronização...");
-    
-    forceSyncStatusUI();
+    if (document.visibilityState === "visible") {
+        console.log("→ Visibilitychange: página visível novamente");
 
-    setTimeout(() => {
+        // 1. Mostra "Sincronizando..." visualmente
+        document.querySelectorAll('.status-badge').forEach(badge => {
+            badge.className = 'status-badge status-sync';
+            badge.textContent = 'Sincronizando...';
+            badge.style.backgroundColor = '#f39c12';
+        });
+
+        // 2. Força verificação imediata
         checkAllDeviceStatus();
-    }, 3000); 
-  }
+
+        // 3. Dá tempo pro Firestore restabelecer websocket
+        setTimeout(checkAllDeviceStatus, 4000);
+        setTimeout(checkAllDeviceStatus, 10000); // segunda chance
+
+        // 4. Opcional: força uma leitura leve para "acordar" a conexão
+        if (Object.keys(allDevicesConfig).length > 0) {
+            const primeiroMac = Object.keys(allDevicesConfig)[0];
+            getDoc(doc(db, "dispositivos", primeiroMac))
+                .catch(() => {}); // silencioso
+        }
+    }
 });
 
 // Função auxiliar visual para mostrar que estamos reconectando

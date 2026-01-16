@@ -201,21 +201,41 @@ margin-bottom: 40px;
 }
 
 .status-offline {
-  background: #e74c3c;
+  background: #e74c3c;  
   color: white;
 }
-
 .in-alarm {
-  border: 2px solid #e74c3c !important; /* Borda vermelha forçada */
-  background-color: #ffe6e6 !important; /* Fundo levemente avermelhado */
-  box-shadow: 0 0 10px rgba(231, 76, 60, 0.7); /* Brilho vermelho */
-  animation: piscar 1.5s infinite; /* Opcional: animação */
+    border: 2px solid #e74c3c;
+    background: #fff5f5;
+    box-shadow: 0 0 12px rgba(231, 76, 60, 0.4);
+    animation: alarmPulse 2s infinite;
 }
 
-/* Animação para chamar atenção (opcional) */
-@keyframes piscar {
-  0% { opacity: 1; }
-  50% { opacity: 0.8; border-color: red; }
-  100% { opacity: 1; }
+.active-alarm-type {
+    font-size: 12px;
+    color: #c0392b;
+    font-weight: 600;
+    margin: 6px 0;
+    padding: 4px 8px;
+    background: rgba(231, 76, 60, 0.1);
+    border-radius: 4px;
 }
 
+@keyframes alarmPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+    70%  { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}
+
+
+.status-sync {
+    background: #f39c12 !important;
+    color: white !important;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
