@@ -481,6 +481,18 @@ function updateCardContent(cardElement, mac) {
       dataTexto = date.toLocaleDateString("pt-BR");
       horaTexto = date.toLocaleTimeString("pt-BR");
     }
+
+    const badgeEl = cardElement.querySelector('.status-badge');
+if (badgeEl) {
+    // LIMPEZA IMPORTANTE: Remove estilos inline forçados pela função de sync
+    badgeEl.style.backgroundColor = ""; 
+    badgeEl.style.color = "";
+    
+    // Seu código original continua aqui:
+    badgeEl.className = `status-badge status-${status.toLowerCase()}`;
+    badgeEl.textContent = status;
+}
+
   }
 
   const setorDisplay = deviceConfig.nomeSetor || "N/A";
@@ -781,10 +793,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 2000);
   
-  // Monitora mudanças na visibilidade da página
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && deferredPrompt && !installButton) {
-      showInstallButton();
-    }
-  });
+  // =========================================================================
+// CORREÇÃO MOBILE: RECONEXÃO AO VOLTAR O FOCO
+// =========================================================================
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    console.log("📱 App acordou! Iniciando ressincronização...");
+    
+    forceSyncStatusUI();
+
+    setTimeout(() => {
+        checkAllDeviceStatus();
+    }, 3000); 
+  }
+});
+
+// Função auxiliar visual para mostrar que estamos reconectando
+function forceSyncStatusUI() {
+    const badges = document.querySelectorAll('.status-badge');
+    
+    badges.forEach(badge => {
+        badge.classList.remove('status-online', 'status-offline');
+        badge.style.backgroundColor = "#f1c40f"; 
+        badge.style.color = "#fff";
+        badge.textContent = "Sincronizando...";
+    });
+}
   });
