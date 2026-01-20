@@ -28,25 +28,29 @@ let alarmListeners = {};
 let activeAlarms = new Set();
 let lastValidReadings = {};
 const OFFLINE_THRESHOLD_SECONDS = 200;
+let isReconnecting = false;
+let deferredPrompt = null;
+let installButton = null;
 
 // Init: Após auth, carrega dados
 document.addEventListener("DOMContentLoaded", async () => {
+  // 1. Inicializa overlay PWA desktop
+  checkInstallOverlay();
+  
+  // 2. Verifica usuário
   const user = getUser();
 
-  // Cenário 1: Usuário já está no localStorage (login recente)
   if (user) {
     console.log("Usuário carregado do cache local:", user.email);
-    initDashboard();
-  }
-  // Cenário 2: Usuário null, mas pode ser delay do Firebase.
-  else {
+    await initDashboard();
+  } else {
     console.log("Aguardando autenticação (AuthGuard)...");
-
-    // Escuta o evento do auth.js
     window.addEventListener("userReady", () => {
       initDashboard();
     });
   }
+
+  setupReconnectionHandler();
 });
 
 async function initDashboard() {
@@ -59,11 +63,11 @@ async function initDashboard() {
 
   if (!institution || !institution.id) {
     console.log(
-      "Nenhuma instituição ativa. Tentando definir automaticamente..."
+      "Nenhuma instituição ativa. Tentando definir automaticamente...",
     );
     showNotification(
       "Nenhuma instituição selecionada. Redirecionando...",
-      "info"
+      "info",
     );
     setTimeout(() => window.location.replace("./login.html"), 2000);
     return;
@@ -74,6 +78,54 @@ async function initDashboard() {
 
   setInterval(checkAllDeviceStatus, 60000);
   checkAllDeviceStatus();
+}
+
+function setupReconnectionHandler() {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      console.log("→ App visível. Recarregando dados...");
+      isReconnecting = true;
+      
+      setTimeout(async () => {
+        if (typeof checkAllDeviceStatus === 'function') {
+          // Força uma verificação imediata
+          checkAllDeviceStatus();
+          
+          // Se houver dados, tenta "acordar" o Firestore
+          if (Object.keys(allDevicesConfig).length > 0) {
+            const primeiroMac = Object.keys(allDevicesConfig)[0];
+            try {
+              await getDoc(doc(db, "dispositivos", primeiroMac));
+            } catch (err) {
+              console.log("Teste de reconexão Firestore:", err.message);
+            }
+          }
+          
+          setTimeout(() => {
+             isReconnecting = false;
+            console.log("→ Segundo teste de reconexão...");
+            checkAllDeviceStatus();
+          }, 3000);
+        }
+      }, 500);
+    }
+  });
+
+  //  Também monitora conexão de rede
+  window.addEventListener('online', () => {
+    console.log("→ Navegador online. Atualizando...");
+    if (typeof checkAllDeviceStatus === 'function') {
+      checkAllDeviceStatus();
+    }
+  });
+
+  window.addEventListener('offline', () => {
+    console.log("→ Navegador offline. Marcando como offline...");
+    Object.keys(deviceStatus).forEach(mac => {
+      deviceStatus[mac] = "OFFLINE";
+    });
+    updateAllCards();
+  });
 }
 
 // Constrói a hierarquia uiTree (instituição > unidade > setor > devices)
@@ -93,7 +145,7 @@ async function buildUiTree(instId) {
   // 2. Busca TODAS as unidades dessa instituição
   const unitsQuery = query(
     collection(db, "unidades"),
-    where("instituicaoId", "==", instId)
+    where("instituicaoId", "==", instId),
   );
   const unitsSnapshot = await getDocs(unitsQuery);
 
@@ -102,10 +154,10 @@ async function buildUiTree(instId) {
 
   // 3. Busca TODOS os setores dessas unidades
 
-  // Vamos buscar também TODOS os dispositivos da instituição de uma vez para não fazer milhares de leituras
+  // Buscar também TODOS os dispositivos da instituição 
   const devicesQuery = query(
     collection(db, "dispositivos"),
-    where("instituicaoID", "==", instId)
+    where("instituicaoID", "==", instId),
   );
   const devicesSnapshot = await getDocs(devicesQuery);
 
@@ -123,7 +175,7 @@ async function buildUiTree(instId) {
       ...data,
     });
 
-    // Aproveita para atualizar o cache global de configurações
+    //Atualizar o cache global de configurações
     allDevicesConfig[doc.id] = data;
   });
 
@@ -141,7 +193,7 @@ async function buildUiTree(instId) {
     // Busca setores desta unidade
     const sectorsQuery = query(
       collection(db, "setores"),
-      where("unidadeId", "==", unitId)
+      where("unidadeId", "==", unitId),
     );
     const sectorsSnapshot = await getDocs(sectorsQuery);
 
@@ -149,7 +201,7 @@ async function buildUiTree(instId) {
       const sectorId = sectorDoc.id;
       const sectorData = sectorDoc.data();
 
-      // Pega os dispositivos deste setor do nosso mapa pré-carregado
+      // Pega os dispositivos deste setor do mapa pré-carregado
       const setorDispositivos = devicesBySector[sectorId] || [];
 
       // Só adiciona o setor se tiver nome
@@ -191,7 +243,7 @@ function startDeviceListener(mac) {
     },
     (error) => {
       console.error(`Erro ao escutar dispositivo ${mac}:`, error);
-    }
+    },
   );
 
   deviceListeners[mac] = unsubscribe;
@@ -202,7 +254,7 @@ function renderDashboard(uiTree) {
   const container = document.getElementById("dashboard-container");
   if (!container) {
     console.error(
-      "ERRO CRÍTICO: Elemento <main id='dashboard-container'> não encontrado no HTML."
+      "ERRO CRÍTICO: Elemento <main id='dashboard-container'> não encontrado no HTML.",
     );
     return;
   }
@@ -216,12 +268,12 @@ function renderDashboard(uiTree) {
   }
 
   uiTree.unidades.forEach((unidade) => {
-    // 🔍 Filtra apenas setores que possuem dispositivos
+    // Filtra apenas setores que possuem dispositivos
     const setoresComDispositivos = (unidade.setores || []).filter(
-      (setor) => setor.dispositivos && setor.dispositivos.length > 0
+      (setor) => setor.dispositivos && setor.dispositivos.length > 0,
     );
 
-    // 🚫 Se a unidade não tiver nenhum setor com dispositivos, ignora
+    // Se a unidade não tiver nenhum setor com dispositivos, ignora
     if (setoresComDispositivos.length === 0) return;
 
     // Cria a Unidade
@@ -253,8 +305,7 @@ function renderDashboard(uiTree) {
 
         sectorCardsContainer.appendChild(cardEl);
         deviceCards[deviceConfig.mac] = cardEl;
-
-        renderDeviceCard({ ...deviceConfig, setorNome: setor.nome }, null);
+        updateCardContent(cardEl, deviceConfig.mac);
         startDeviceListener(deviceConfig.mac);
         startAlarmListener(deviceConfig.mac);
       });
@@ -270,119 +321,14 @@ function renderDashboard(uiTree) {
 // =========================================================================
 // FUNÇÃO DE RENDERIZAÇÃO DO CARD
 // =========================================================================
-function renderDeviceCard(deviceConfig, data) {
-  // 1. Encontra ou cria o elemento do card
-  let cardElement = document.getElementById(`card-${deviceConfig.mac}`);
-
-  // Se o card não existe, cria um novo
-  if (!cardElement) {
-    cardElement = document.createElement("div");
-    cardElement.id = `card-${deviceConfig.mac}`;
-    cardElement.className = "device-card";
-
-    // Adiciona ao container de dispositivos
-    const devicesContainer = document.getElementById("devices-container");
-    if (devicesContainer) {
-      devicesContainer.appendChild(cardElement);
-    }
-  }
-
-  let mainValue = "--";
-  let humidityValue = "--";
-  let timestampText = "Aguardando dados...";
-  let status = "OFFLINE";
-  let mainColor = "#2c3e50";
-  let badgeClass = "status-offline";
-  let isAlarm = false;
-
-  // 3. Processa os dados se existirem
-  if (data) {
-    // Temperatura
-    if (data.t !== undefined) {
-      mainValue = parseFloat(data.t).toFixed(1) + "°C";
-    }
-
-    // Umidade
-    if (data.h !== undefined) {
-      humidityValue = parseFloat(data.h).toFixed(0) + "%";
-    }
-
-    // Timestamp e Status Online/Offline
-    if (data.ts) {
-      // Converte timestamp do Firestore ou número
-      const readingTime = data.ts.toDate ? data.ts.toDate() : new Date(data.ts);
-      timestampText = readingTime.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-      // Verifica se está online
-      const now = new Date();
-      const diffSeconds = (now - readingTime) / 1000;
-
-      if (diffSeconds < (OFFLINE_THRESHOLD_SECONDS || 300)) {
-        status = "ONLINE";
-        badgeClass = "status-online";
-      }
-    }
-
-    // 4. Lógica de Cores e Alarmes
-    const tempVal = parseFloat(data.t);
-    const min = parseFloat(deviceConfig.alarmeMin || -999);
-    const max = parseFloat(deviceConfig.alarmeMax || 999);
-
-    if (!isNaN(tempVal)) {
-      if (tempVal < min || tempVal > max) {
-        mainColor = "#e74c3c";
-        isAlarm = true;
-        cardElement.classList.add("in-alarm");
-      } else {
-        mainColor = "#27ae60"; // Verde (Normal)
-        cardElement.classList.remove("in-alarm");
-      }
-    }
-  }
-
-  const setorDisplay = deviceConfig.setorNome || "Setor";
-
-  cardElement.innerHTML = `
-    <div class="device-header">${setorDisplay}</div>
-    <div class="device-name">${deviceConfig.nome || deviceConfig.mac}</div>
-    
-    <div class="device-header" style="margin-top: 10px;">Temperatura</div>
-    <div class="main-temperature" style="color: ${mainColor};">
-      ${mainValue}
-    </div>
-
-    <div class="alarm-info">
-      <span>Min: ${deviceConfig.alarmeMin || "--"}°</span>
-      <span>Max: ${deviceConfig.alarmeMax || "--"}°</span>
-    </div>
-
-    ${
-      humidityValue !== "--"
-        ? `
-      <div class="additional-data">
-        <div class="data-item">
-          <div class="data-label">Umidade</div>
-          <div class="data-value">${humidityValue}</div>
-        </div>
-      </div>
-    `
-        : ""
-    }
-
-    <div class="timestamp">Atualizado: ${timestampText}</div>
-    <div class="status-badge ${badgeClass}">${status}</div>
-    
-    `;
-
-  cardElement.onclick = () => openDeviceDetails(deviceConfig);
-
-  return cardElement;
-}
 
 function checkDeviceStatus(mac) {
+  if (isReconnecting) {
+    deviceStatus[mac] = "SINCRONIZANDO";
+    if (deviceCards[mac]) updateCardContent(deviceCards[mac], mac);
+    return;
+  }
+
   const config = allDevicesConfig[mac];
   const statusTimestamp = config?.statusTimestamp;
   if (!config || !statusTimestamp) {
@@ -404,6 +350,7 @@ function checkDeviceStatus(mac) {
     deviceStatus[mac] = "OFFLINE";
   }
 }
+
 
 function checkAllDeviceStatus() {
   console.log("Executando verificação periódica de status...");
@@ -434,15 +381,15 @@ function updateCardContent(cardElement, mac) {
     : "🏠 Temperatura Ambiente";
   let dataTexto = "--/--/----";
   let horaTexto = "--:--";
-  
 
   if (isAlarm) {
-    mainColor = "#e74c3c"; // vermelho
+    mainColor = "#e74c3c"; 
   } else if (status !== "ONLINE") {
-    mainColor = "#95a5a6"; // cinza offline
+    mainColor = "#95a5a6"; 
   }
 
   cardElement.classList.toggle("in-alarm", isAlarm);
+  
 
   if (
     status === "ONLINE" &&
@@ -600,15 +547,11 @@ document.querySelector(".close-overlay").addEventListener("click", () => {
   localStorage.setItem("pwa_prompt_timestamp", new Date().getTime());
 });
 
-// Chame a função
-document.addEventListener("DOMContentLoaded", checkInstallOverlay);
-
 // ======================================================
 // 6. INSTALAÇÃO DO PWA
 // ======================================================
 
-let deferredPrompt = null;
-let installButton = null;
+
 
 // 1. Captura o evento de instalação
 window.addEventListener("beforeinstallprompt", (e) => {
@@ -624,9 +567,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
 
 // 2. Função para mostrar botão de instalação
 function showInstallButton() {
-  if (window.innerWidth > 1024) return;
-  // Não mostra se já está instalado ou se já existe o botão
-  if (isPWAInstalled() || document.getElementById("pwa-install-button")) {
+  if (isPWAInstalled() || document.getElementById("pwa-install-button") || window.innerWidth > 1024) {
     return;
   }
 
@@ -744,7 +685,7 @@ async function installPWA() {
 
 //Função para identificar confição de alarme
 function startAlarmListener(mac) {
-  if (alarmListeners[mac]) return; // evita duplicatas
+  if (alarmListeners[mac]) return; 
 
   const alarmRef = doc(db, "dispositivos", mac, "eventos", "estadoAlarmeAtual");
 
@@ -760,7 +701,7 @@ function startAlarmListener(mac) {
 
       deviceAlarmStatus[mac] = alarmData;
 
-      // Opcional: notificação toast quando entra em alarme
+      // notificação toast quando entra em alarme
       const wasActive = activeAlarms.has(mac);
       const isNowActive = alarmData.ativo === true;
 
@@ -772,7 +713,7 @@ function startAlarmListener(mac) {
             `Alarme em ${config.nomeDispositivo || mac}: ${message}`,
             "error",
             "Atenção",
-            8000
+            8000,
           );
           activeAlarms.add(mac);
         }
@@ -790,7 +731,7 @@ function startAlarmListener(mac) {
       deviceAlarmStatus[mac] = { ativo: false, tipo: "Nenhum" };
       activeAlarms.delete(mac);
       if (deviceCards[mac]) updateCardContent(deviceCards[mac], mac);
-    }
+    },
   );
 
   alarmListeners[mac] = unsubscribe;
@@ -841,42 +782,39 @@ function showManualInstallGuide() {
   alert(message);
 }
 
-// 7. Inicialização e Reconexão
-document.addEventListener("DOMContentLoaded", () => {
-  
-  // Verifica instalação PWA (seu código original)
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    // Atualiza layout responsivo
+    if (Object.keys(deviceCards).length > 0) {
+      updateAllCards();
+    }
+  }, 250);
+});
+
+// 2. Cache de dispositivos offline
+const offlineCache = {};
+
+// 3. Adicione cleanup ao sair da página
+window.addEventListener('beforeunload', () => {
+  clearAllListeners();
+  if (installButton) {
+    hideInstallButton();
+  }
+});
+
+function updateAllCards() {
+  for (const mac in deviceCards) {
+    if (deviceCards[mac]) {
+      updateCardContent(deviceCards[mac], mac);
+    }
+  }
+}
+
+  // 3. Configura PWA mobile 
   setTimeout(() => {
     if (!isPWAInstalled() && deferredPrompt) {
       showInstallButton();
     }
   }, 2000);
-
-  // --- LÓGICA DE RECONEXÃO CORRETA ---
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      console.log("→ App visível. Iniciando modo de reconexão...");
-
-      // 1. Ativa o "Escudo" (Avisa o sistema que estamos reconectando)
-      isReconnecting = true;
-
-      // 2. Atualiza os cards
-      // Como isReconnecting é true, a função checkAllDeviceStatus vai 
-      // definir o status como "SYNCING" e pintar de Laranja automaticamente via updateCardContent.
-      checkAllDeviceStatus();
-
-      // 3. (Opcional) Truque para acordar o Firestore
-      if (Object.keys(allDevicesConfig).length > 0) {
-        const primeiroMac = Object.keys(allDevicesConfig)[0];
-        getDoc(doc(db, "dispositivos", primeiroMac)).catch(() => {}); 
-      }
-
-      // 4. Define o fim do período de graça (10 segundos)
-      setTimeout(() => {
-        console.log("→ Fim do período de reconexão.");
-        isReconnecting = false; // Desliga o escudo
-        checkAllDeviceStatus(); // Verifica o status real (Online ou Offline)
-      }, 10000);
-    }
-  });
-});
-

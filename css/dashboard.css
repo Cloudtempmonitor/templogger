@@ -226,3 +226,8 @@ margin-bottom: 40px;
     50% { opacity: 0.6; }
     100% { opacity: 1; }
 }
+
+.status-sincronizando {
+  background: #f39c12 !important;
+  color: white !important;
+}
