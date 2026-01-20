@@ -58,16 +58,6 @@ async function initDeviceDetails() {
 
 
 
-async function loadUserData(userId) {
-  const userDocRef = doc(db, "usuarios", userId);
-  const snapshot = await getDoc(userDocRef);
-  if (snapshot.exists()) {
-    const userData = snapshot.data();
-    document.getElementById("user-name").textContent =
-      userData.nome || "Usuário";
-  }
-}
-
 function showLoading(show) {
   let loader = document.getElementById("loading-indicator");
   if (!loader) {

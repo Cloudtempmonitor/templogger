@@ -105,10 +105,10 @@ margin-bottom: 40px;
 }
 
 .device-container {
-  min-width: 180px;
+  min-width: 100px;
   padding: 20px;
   background: white;
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   text-align: center;
   cursor: pointer;
@@ -121,35 +121,26 @@ margin-bottom: 40px;
 }
 
 .device-header {
-  font-size: 14px;
+  font-size: 12px;
   color: #7f8c8d;
   margin: 2px 0;
 }
 
 .device-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 .main-temperature {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: bold;
-}
-
-.alarm-info {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #95a5a6;
-  margin: 10px 0;
 }
 
 .additional-data {
   display: flex;
   justify-content: space-around;
-  margin: 15px 0;
+  margin: 08px 2;
 }
 
 .data-item {
@@ -157,7 +148,7 @@ margin-bottom: 40px;
 }
 
 .data-label {
-  font-size: 12px;
+  font-size: 10px;
   color: #7f8c8d;
 }
 
@@ -175,11 +166,6 @@ margin-bottom: 40px;
   line-height: 1.2;
 }
 
-.timestamp .label {
-  font-size: 12px;
-  opacity: 0.85;
-}
-
 .timestamp .date {
   font-size: 11px;
 }
@@ -188,10 +174,10 @@ margin-bottom: 40px;
 }
 
 .status-badge {
-  margin-top: 10px;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 12px;
+  margin-top: 2px;
+  padding: 2px 5px;
+  border-radius: 8px;
+  font-size: 10px;
   font-weight: bold;
 }
 
@@ -204,6 +190,7 @@ margin-bottom: 40px;
   background: #e74c3c;  
   color: white;
 }
+
 .in-alarm {
     border: 2px solid #e74c3c;
     background: #fff5f5;

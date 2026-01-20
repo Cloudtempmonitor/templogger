@@ -1,6 +1,6 @@
-// js/pages/dashboard.js 
+// js/pages/dashboard.js
 import { getUser, getActiveInstitution } from "../core/state.js";
-import { getFriendlyAlarmMessage} from "../utils/helpers.js";
+import { getFriendlyAlarmMessage } from "../utils/helpers.js";
 import { auth, db } from "../services/firebase.js";
 import {
   doc,
@@ -12,8 +12,11 @@ import {
   onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { showNotification} from "../ui/notifications.js";
-import { requestNotificationPermission, listenToForegroundMessages } from "../services/push-notification.js";
+import { showNotification } from "../ui/notifications.js";
+import {
+  requestNotificationPermission,
+  listenToForegroundMessages,
+} from "../services/push-notification.js";
 
 // Variáveis globais
 let allDevicesConfig = {};
@@ -24,8 +27,7 @@ let deviceListeners = {};
 let alarmListeners = {};
 let activeAlarms = new Set();
 let lastValidReadings = {};
-const OFFLINE_THRESHOLD_SECONDS = 200;  
-
+const OFFLINE_THRESHOLD_SECONDS = 200;
 
 // Init: Após auth, carrega dados
 document.addEventListener("DOMContentLoaded", async () => {
@@ -35,7 +37,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (user) {
     console.log("Usuário carregado do cache local:", user.email);
     initDashboard();
-    
   }
   // Cenário 2: Usuário null, mas pode ser delay do Firebase.
   else {
@@ -43,21 +44,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Escuta o evento do auth.js
     window.addEventListener("userReady", () => {
-     initDashboard();
+      initDashboard();
     });
   }
 });
 
 async function initDashboard() {
   const user = getUser();
-   requestNotificationPermission(user.uid);
-   listenToForegroundMessages();
+  requestNotificationPermission(user.uid);
+  listenToForegroundMessages();
   if (!user) return;
   clearAllListeners();
   const institution = getActiveInstitution();
 
   if (!institution || !institution.id) {
-    console.log("Nenhuma instituição ativa. Tentando definir automaticamente...");
+    console.log(
+      "Nenhuma instituição ativa. Tentando definir automaticamente..."
+    );
     showNotification(
       "Nenhuma instituição selecionada. Redirecionando...",
       "info"
@@ -97,7 +100,7 @@ async function buildUiTree(instId) {
   // Se não tiver unidades, retorna logo
   if (unitsSnapshot.empty) return result;
 
-  // 3. Busca TODOS os setores dessas unidades 
+  // 3. Busca TODOS os setores dessas unidades
 
   // Vamos buscar também TODOS os dispositivos da instituição de uma vez para não fazer milhares de leituras
   const devicesQuery = query(
@@ -149,7 +152,7 @@ async function buildUiTree(instId) {
       // Pega os dispositivos deste setor do nosso mapa pré-carregado
       const setorDispositivos = devicesBySector[sectorId] || [];
 
-      // Só adiciona o setor se tiver nome 
+      // Só adiciona o setor se tiver nome
       unidadeObj.setores.push({
         id: sectorId,
         nome: sectorData.nome || "Setor Sem Nome",
@@ -161,7 +164,7 @@ async function buildUiTree(instId) {
     result.unidades.push(unidadeObj);
   }
 
-  // Ordena unidades por nome 
+  // Ordena unidades por nome
   result.unidades.sort((a, b) => a.nome.localeCompare(b.nome));
 
   return result;
@@ -171,21 +174,25 @@ async function buildUiTree(instId) {
 function startDeviceListener(mac) {
   if (deviceListeners[mac]) return;
 
-  const unsubscribe = onSnapshot(doc(db, "dispositivos", mac), (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
+  const unsubscribe = onSnapshot(
+    doc(db, "dispositivos", mac),
+    (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
 
-      allDevicesConfig[mac] = { ...allDevicesConfig[mac], ...data };
+        allDevicesConfig[mac] = { ...allDevicesConfig[mac], ...data };
 
-      checkDeviceStatus(mac);
+        checkDeviceStatus(mac);
 
-      if (deviceCards[mac]) {
-        updateCardContent(deviceCards[mac], mac);
+        if (deviceCards[mac]) {
+          updateCardContent(deviceCards[mac], mac);
+        }
       }
+    },
+    (error) => {
+      console.error(`Erro ao escutar dispositivo ${mac}:`, error);
     }
-  }, (error) => {
-    console.error(`Erro ao escutar dispositivo ${mac}:`, error);
-  });
+  );
 
   deviceListeners[mac] = unsubscribe;
 }
@@ -252,8 +259,6 @@ function renderDashboard(uiTree) {
         startAlarmListener(deviceConfig.mac);
       });
 
-      
-
       sectorSection.appendChild(sectorCardsContainer);
       unitSection.appendChild(sectorSection);
     });
@@ -263,20 +268,20 @@ function renderDashboard(uiTree) {
 }
 
 // =========================================================================
-// FUNÇÃO DE RENDERIZAÇÃO DO CARD 
+// FUNÇÃO DE RENDERIZAÇÃO DO CARD
 // =========================================================================
 function renderDeviceCard(deviceConfig, data) {
   // 1. Encontra ou cria o elemento do card
   let cardElement = document.getElementById(`card-${deviceConfig.mac}`);
-  
+
   // Se o card não existe, cria um novo
   if (!cardElement) {
-    cardElement = document.createElement('div');
+    cardElement = document.createElement("div");
     cardElement.id = `card-${deviceConfig.mac}`;
-    cardElement.className = 'device-card';
-    
+    cardElement.className = "device-card";
+
     // Adiciona ao container de dispositivos
-    const devicesContainer = document.getElementById('devices-container');
+    const devicesContainer = document.getElementById("devices-container");
     if (devicesContainer) {
       devicesContainer.appendChild(cardElement);
     }
@@ -286,7 +291,7 @@ function renderDeviceCard(deviceConfig, data) {
   let humidityValue = "--";
   let timestampText = "Aguardando dados...";
   let status = "OFFLINE";
-  let mainColor = "#2c3e50"; 
+  let mainColor = "#2c3e50";
   let badgeClass = "status-offline";
   let isAlarm = false;
 
@@ -311,7 +316,7 @@ function renderDeviceCard(deviceConfig, data) {
         minute: "2-digit",
       });
 
-      // Verifica se está online 
+      // Verifica se está online
       const now = new Date();
       const diffSeconds = (now - readingTime) / 1000;
 
@@ -328,7 +333,7 @@ function renderDeviceCard(deviceConfig, data) {
 
     if (!isNaN(tempVal)) {
       if (tempVal < min || tempVal > max) {
-        mainColor = "#e74c3c"; 
+        mainColor = "#e74c3c";
         isAlarm = true;
         cardElement.classList.add("in-alarm");
       } else {
@@ -372,10 +377,9 @@ function renderDeviceCard(deviceConfig, data) {
     
     `;
 
-    cardElement.onclick = () => openDeviceDetails(deviceConfig);
-  
-  return cardElement;
+  cardElement.onclick = () => openDeviceDetails(deviceConfig);
 
+  return cardElement;
 }
 
 function checkDeviceStatus(mac) {
@@ -415,9 +419,9 @@ function updateCardContent(cardElement, mac) {
   const status = deviceStatus[mac] || "OFFLINE";
 
   const alarm = deviceAlarmStatus[mac] || { ativo: false, tipo: "Nenhum" };
-    const isAlarm = alarm.ativo === true;
+  const isAlarm = alarm.ativo === true;
 
-    const isSondaAtiva = deviceConfig.sondaAtiva === true;
+  const isSondaAtiva = deviceConfig.sondaAtiva === true;
   let mainValue = "N/A";
   let ambientTempValue = "N/A";
   let humidityValue = "N/A";
@@ -430,21 +434,16 @@ function updateCardContent(cardElement, mac) {
     : "🏠 Temperatura Ambiente";
   let dataTexto = "--/--/----";
   let horaTexto = "--:--";
-  let timestampLabel = "Última leitura:";
+  
 
-
-
-    if (isAlarm) {
-        mainColor = "#e74c3c";     // vermelho
-        
-    } else if (status !== "ONLINE") {
-        mainColor = "#95a5a6";     // cinza offline
-    }
-
+  if (isAlarm) {
+    mainColor = "#e74c3c"; // vermelho
+  } else if (status !== "ONLINE") {
+    mainColor = "#95a5a6"; // cinza offline
+  }
 
   cardElement.classList.toggle("in-alarm", isAlarm);
 
-  
   if (
     status === "ONLINE" &&
     currentReading &&
@@ -496,17 +495,14 @@ function updateCardContent(cardElement, mac) {
       horaTexto = date.toLocaleTimeString("pt-BR");
     }
 
-    const badgeEl = cardElement.querySelector('.status-badge');
-if (badgeEl) {
-    // LIMPEZA IMPORTANTE: Remove estilos inline forçados pela função de sync
-    badgeEl.style.backgroundColor = ""; 
-    badgeEl.style.color = "";
-    
-    // Seu código original continua aqui:
-    badgeEl.className = `status-badge status-${status.toLowerCase()}`;
-    badgeEl.textContent = status;
-}
+    const badgeEl = cardElement.querySelector(".status-badge");
+    if (badgeEl) {
+      badgeEl.style.backgroundColor = "";
+      badgeEl.style.color = "";
 
+      badgeEl.className = `status-badge status-${status.toLowerCase()}`;
+      badgeEl.textContent = status;
+    }
   }
 
   const setorDisplay = deviceConfig.nomeSetor || "N/A";
@@ -517,7 +513,7 @@ if (badgeEl) {
     ? `
         <div class="additional-data">
           <div class="data-item">
-            <div class="data-label">Temp. Ambiente</div>
+            <div class="data-label">T.Ambiente</div>
             <div class="data-value">${ambientTempValue}</div>
           </div>
           <div class="data-item">
@@ -536,7 +532,6 @@ if (badgeEl) {
       `;
 
   cardElement.innerHTML = `
-    <div class="device-header">${setorDisplay}</div>
     <div class="device-name">${nomeDispositivoDisplay}</div>
     <div class="device-header" style="font-weight: bold; color: ${
       isSondaAtiva ? "var(--cor-texto-cinza)" : "#3498db"
@@ -544,95 +539,85 @@ if (badgeEl) {
       ${mainLabelText}
     </div>
     <div class="main-temperature" style="color: ${mainColor};">${mainValue}</div>
-    <div class="alarm-info">
-      <span style="color: #3498db;">${alarmeMinDisplay}</span>
-      &lt; alarmes &gt;
-      <span style="color: #e74c3c;">${alarmeMaxDisplay}</span>
-    </div>
+
     ${additionalDataHTML}
     <div class="timestamp">
-  <span class="label">${timestampLabel}</span>
+    <div class="status-badge status-${status.toLowerCase()}">${status}</div>
   <span class="datetime">
     <span class="date">${dataTexto}</span>
     <span class="time">${horaTexto}</span>
   </span>
 </div>
-    <div class="status-badge status-${status.toLowerCase()}">${status}</div>
+  
   `;
 
   cardElement.onclick = () => {
- openDeviceDetails(deviceConfig);
+    openDeviceDetails(deviceConfig);
   };
 }
 
-
 function clearAllListeners() {
-    Object.values(deviceListeners).forEach(unsub => unsub && unsub());
-    Object.values(alarmListeners).forEach(unsub => unsub && unsub());
-    
-    deviceListeners = {};
-    alarmListeners = {};
-    activeAlarms.clear();
+  Object.values(deviceListeners).forEach((unsub) => unsub && unsub());
+  Object.values(alarmListeners).forEach((unsub) => unsub && unsub());
+
+  deviceListeners = {};
+  alarmListeners = {};
+  activeAlarms.clear();
 }
 
 //Função que direcionar para a página de detalhes do dispositivo clicado
 function openDeviceDetails(deviceConfig) {
   const mac = deviceConfig.mac;
-  
+
   if (!mac) {
-    console.error('Dispositivo sem MAC:', deviceConfig);
+    console.error("Dispositivo sem MAC:", deviceConfig);
     return;
   }
 
   window.location.href = `device-details.html?mac=${mac}`;
-  
 }
 
-
 function checkInstallOverlay() {
-    const lastTime = localStorage.getItem('pwa_prompt_timestamp');
-    const agora = new Date().getTime();
-    const umDia = 24 * 60 * 60 * 1000;
+  const lastTime = localStorage.getItem("pwa_prompt_timestamp");
+  const agora = new Date().getTime();
+  const umDia = 24 * 60 * 60 * 1000;
 
-    // Se já instalou, não faz nada
-    if (window.matchMedia('(display-mode: standalone)').matches) return;
+  // Se já instalou, não faz nada
+  if (window.matchMedia("(display-mode: standalone)").matches) return;
 
-    // Só mostra se for Desktop e se passou mais de 24h desde o último "fechar"
-    if (window.innerWidth > 1024 && (!lastTime || (agora - lastTime > umDia))) {
-        setTimeout(() => {
-            document.getElementById('desktop-install-overlay').style.display = 'block';
-        }, 3000); 
-    }
+  // Só mostra se for Desktop e se passou mais de 24h desde o último "fechar"
+  if (window.innerWidth > 1024 && (!lastTime || agora - lastTime > umDia)) {
+    setTimeout(() => {
+      document.getElementById("desktop-install-overlay").style.display =
+        "block";
+    }, 3000);
+  }
 }
 
 // Ao clicar em fechar
-document.querySelector('.close-overlay').addEventListener('click', () => {
-    document.getElementById('desktop-install-overlay').style.display = 'none';
-    localStorage.setItem('pwa_prompt_timestamp', new Date().getTime());
+document.querySelector(".close-overlay").addEventListener("click", () => {
+  document.getElementById("desktop-install-overlay").style.display = "none";
+  localStorage.setItem("pwa_prompt_timestamp", new Date().getTime());
 });
 
 // Chame a função
-document.addEventListener('DOMContentLoaded', checkInstallOverlay);
-
-
-
+document.addEventListener("DOMContentLoaded", checkInstallOverlay);
 
 // ======================================================
-// 6. INSTALAÇÃO DO PWA 
+// 6. INSTALAÇÃO DO PWA
 // ======================================================
 
 let deferredPrompt = null;
 let installButton = null;
 
 // 1. Captura o evento de instalação
-window.addEventListener('beforeinstallprompt', (e) => {
-  
+window.addEventListener("beforeinstallprompt", (e) => {
   // Previne o prompt automático
   e.preventDefault();
-  
+
   // Armazena o evento para uso posterior
   deferredPrompt = e;
-  
+
   // Mostra o botão de instalação após 3 segundos
   setTimeout(showInstallButton, 3000);
 });
@@ -641,13 +626,13 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function showInstallButton() {
   if (window.innerWidth > 1024) return;
   // Não mostra se já está instalado ou se já existe o botão
-  if (isPWAInstalled() || document.getElementById('pwa-install-button')) {
+  if (isPWAInstalled() || document.getElementById("pwa-install-button")) {
     return;
   }
-  
+
   // Cria o botão
-  installButton = document.createElement('button');
-  installButton.id = 'pwa-install-button';
+  installButton = document.createElement("button");
+  installButton.id = "pwa-install-button";
   installButton.innerHTML = `
     <span style="font-size: 20px;">📱</span>
     <div style="text-align: left;">
@@ -656,7 +641,7 @@ function showInstallButton() {
     </div>
     <span style="margin-left: auto;">↓</span>
   `;
-  
+
   // Estilos
   installButton.style.cssText = `
     position: fixed;
@@ -678,9 +663,9 @@ function showInstallButton() {
     animation: slideInUp 0.5s ease, pulse 2s infinite;
     transition: all 0.3s ease;
   `;
-  
+
   // Adiciona animação
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.textContent = `
     @keyframes slideInUp {
       from {
@@ -710,13 +695,13 @@ function showInstallButton() {
     }
   `;
   document.head.appendChild(style);
-  
+
   // Evento de clique
-  installButton.addEventListener('click', installPWA);
-  
+  installButton.addEventListener("click", installPWA);
+
   // Adiciona ao documento
   document.body.appendChild(installButton);
-  
+
   // Remove após 30 segundos
   setTimeout(() => {
     if (installButton && document.body.contains(installButton)) {
@@ -731,89 +716,92 @@ async function installPWA() {
     showManualInstallGuide();
     return;
   }
-  
+
   try {
     // Mostra o prompt de instalação
     deferredPrompt.prompt();
-    
+
     // Aguarda a resposta do usuário
     const choiceResult = await deferredPrompt.userChoice;
-    if (choiceResult.outcome === 'accepted') {
+    if (choiceResult.outcome === "accepted") {
       // Sucesso na instalação
-      installButton.innerHTML = '✅ Instalado! O app será aberto em breve...';
-      installButton.style.background = '#28a745';
-      installButton.style.animation = 'none';
-      
+      installButton.innerHTML = "✅ Instalado! O app será aberto em breve...";
+      installButton.style.background = "#28a745";
+      installButton.style.animation = "none";
+
       setTimeout(hideInstallButton, 2000);
     }
-    
+
     // Limpa o prompt
     deferredPrompt = null;
-    
   } catch (error) {
-    installButton.innerHTML = '❌ Erro na instalação';
-    installButton.style.background = '#dc3545';
-    
+    installButton.innerHTML = "❌ Erro na instalação";
+    installButton.style.background = "#dc3545";
+
     setTimeout(hideInstallButton, 3000);
   }
 }
 
 //Função para identificar confição de alarme
 function startAlarmListener(mac) {
-    if (alarmListeners[mac]) return; // evita duplicatas
+  if (alarmListeners[mac]) return; // evita duplicatas
 
-    const alarmRef = doc(db, "dispositivos", mac, "eventos", "estadoAlarmeAtual");
+  const alarmRef = doc(db, "dispositivos", mac, "eventos", "estadoAlarmeAtual");
 
-    const unsubscribe = onSnapshot(alarmRef, (snap) => {
-        let alarmData = { ativo: false, tipo: "Nenhum" };
+  const unsubscribe = onSnapshot(
+    alarmRef,
+    (snap) => {
+      let alarmData = { ativo: false, tipo: "Nenhum" };
 
-        if (snap.exists()) {
-            const data = snap.data();
-            alarmData = data?.estadoAlarmeAtual || alarmData;
+      if (snap.exists()) {
+        const data = snap.data();
+        alarmData = data?.estadoAlarmeAtual || alarmData;
+      }
+
+      deviceAlarmStatus[mac] = alarmData;
+
+      // Opcional: notificação toast quando entra em alarme
+      const wasActive = activeAlarms.has(mac);
+      const isNowActive = alarmData.ativo === true;
+
+      if (isNowActive && !wasActive && deviceStatus[mac] === "ONLINE") {
+        const config = allDevicesConfig[mac];
+        if (config) {
+          const message = getFriendlyAlarmMessage(alarmData.tipo);
+          showNotification(
+            `Alarme em ${config.nomeDispositivo || mac}: ${message}`,
+            "error",
+            "Atenção",
+            8000
+          );
+          activeAlarms.add(mac);
         }
-
-        deviceAlarmStatus[mac] = alarmData;
-
-        // Opcional: notificação toast quando entra em alarme
-        const wasActive = activeAlarms.has(mac);
-        const isNowActive = alarmData.ativo === true;
-
-        if (isNowActive && !wasActive && deviceStatus[mac] === "ONLINE") {
-            const config = allDevicesConfig[mac];
-            if (config) {
-                const message = getFriendlyAlarmMessage(alarmData.tipo);
-                showNotification(
-                    `Alarme em ${config.nomeDispositivo || mac}: ${message}`,
-                    "error",
-                    "Atenção",
-                    8000
-                );
-                activeAlarms.add(mac);
-            }
-        } else if (!isNowActive && wasActive) {
-            activeAlarms.delete(mac);
-        }
-
-        // Atualiza o card visualmente
-        if (deviceCards[mac]) {
-            updateCardContent(deviceCards[mac], mac);
-        }
-    }, (err) => {
-        console.error(`Erro no listener de alarme ${mac}:`, err);
-        deviceAlarmStatus[mac] = { ativo: false, tipo: "Nenhum" };
+      } else if (!isNowActive && wasActive) {
         activeAlarms.delete(mac);
-        if (deviceCards[mac]) updateCardContent(deviceCards[mac], mac);
-    });
+      }
 
-    alarmListeners[mac] = unsubscribe;
+      // Atualiza o card visualmente
+      if (deviceCards[mac]) {
+        updateCardContent(deviceCards[mac], mac);
+      }
+    },
+    (err) => {
+      console.error(`Erro no listener de alarme ${mac}:`, err);
+      deviceAlarmStatus[mac] = { ativo: false, tipo: "Nenhum" };
+      activeAlarms.delete(mac);
+      if (deviceCards[mac]) updateCardContent(deviceCards[mac], mac);
+    }
+  );
+
+  alarmListeners[mac] = unsubscribe;
 }
 
 // 4. Função para esconder o botão
 function hideInstallButton() {
   if (installButton && document.body.contains(installButton)) {
-    installButton.style.opacity = '0';
-    installButton.style.transform = 'translateY(50px)';
-    
+    installButton.style.opacity = "0";
+    installButton.style.transform = "translateY(50px)";
+
     setTimeout(() => {
       if (installButton && document.body.contains(installButton)) {
         installButton.remove();
@@ -825,78 +813,70 @@ function hideInstallButton() {
 
 // 5. Verifica se o PWA já está instalado
 function isPWAInstalled() {
-  return window.matchMedia('(display-mode: standalone)').matches || 
-         window.navigator.standalone === true ||
-         document.referrer.includes('android-app://');
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true ||
+    document.referrer.includes("android-app://")
+  );
 }
 
 // 6. Guia de instalação manual (fallback)
 function showManualInstallGuide() {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
-  
-  let message = '';
-  
+
+  let message = "";
+
   if (isIOS) {
-    message = 'Para instalar: 1. Toque no ícone de compartilhar (📤) 2. Role para baixo 3. Toque em "Adicionar à Tela de Início"';
+    message =
+      'Para instalar: 1. Toque no ícone de compartilhar (📤) 2. Role para baixo 3. Toque em "Adicionar à Tela de Início"';
   } else if (isAndroid) {
-    message = 'Para instalar: 1. Toque no menu (três pontos) 2. Toque em "Adicionar à tela inicial" 3. Confirme a instalação';
+    message =
+      'Para instalar: 1. Toque no menu (três pontos) 2. Toque em "Adicionar à tela inicial" 3. Confirme a instalação';
   } else {
-    message = 'Para instalar: Clique no ícone de instalação (📥) na barra de endereços do navegador';
+    message =
+      "Para instalar: Clique no ícone de instalação (📥) na barra de endereços do navegador";
   }
-  
+
   alert(message);
 }
 
-// 7. Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-  // Verifica após carregamento completo
+// 7. Inicialização e Reconexão
+document.addEventListener("DOMContentLoaded", () => {
+  
+  // Verifica instalação PWA (seu código original)
   setTimeout(() => {
     if (!isPWAInstalled() && deferredPrompt) {
       showInstallButton();
     }
   }, 2000);
-  
-  // =========================================================================
-// CORREÇÃO MOBILE: RECONEXÃO AO VOLTAR O FOCO
-// =========================================================================
-// Reconexão agressiva ao voltar para foreground (muito importante em PWA/mobile)
-document.addEventListener("visibilitychange", () => {
+
+  // --- LÓGICA DE RECONEXÃO CORRETA ---
+  document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-        console.log("→ Visibilitychange: página visível novamente");
+      console.log("→ App visível. Iniciando modo de reconexão...");
 
-        // 1. Mostra "Sincronizando..." visualmente
-        document.querySelectorAll('.status-badge').forEach(badge => {
-            badge.className = 'status-badge status-sync';
-            badge.textContent = 'Sincronizando...';
-            badge.style.backgroundColor = '#f39c12';
-        });
+      // 1. Ativa o "Escudo" (Avisa o sistema que estamos reconectando)
+      isReconnecting = true;
 
-        // 2. Força verificação imediata
-        checkAllDeviceStatus();
+      // 2. Atualiza os cards
+      // Como isReconnecting é true, a função checkAllDeviceStatus vai 
+      // definir o status como "SYNCING" e pintar de Laranja automaticamente via updateCardContent.
+      checkAllDeviceStatus();
 
-        // 3. Dá tempo pro Firestore restabelecer websocket
-        setTimeout(checkAllDeviceStatus, 4000);
-        setTimeout(checkAllDeviceStatus, 10000); // segunda chance
+      // 3. (Opcional) Truque para acordar o Firestore
+      if (Object.keys(allDevicesConfig).length > 0) {
+        const primeiroMac = Object.keys(allDevicesConfig)[0];
+        getDoc(doc(db, "dispositivos", primeiroMac)).catch(() => {}); 
+      }
 
-        // 4. Opcional: força uma leitura leve para "acordar" a conexão
-        if (Object.keys(allDevicesConfig).length > 0) {
-            const primeiroMac = Object.keys(allDevicesConfig)[0];
-            getDoc(doc(db, "dispositivos", primeiroMac))
-                .catch(() => {}); // silencioso
-        }
+      // 4. Define o fim do período de graça (10 segundos)
+      setTimeout(() => {
+        console.log("→ Fim do período de reconexão.");
+        isReconnecting = false; // Desliga o escudo
+        checkAllDeviceStatus(); // Verifica o status real (Online ou Offline)
+      }, 10000);
     }
+  });
 });
 
-// Função auxiliar visual para mostrar que estamos reconectando
-function forceSyncStatusUI() {
-    const badges = document.querySelectorAll('.status-badge');
-    
-    badges.forEach(badge => {
-        badge.classList.remove('status-online', 'status-offline');
-        badge.style.backgroundColor = "#f1c40f"; 
-        badge.style.color = "#fff";
-        badge.textContent = "Sincronizando...";
-    });
-}
-  });
