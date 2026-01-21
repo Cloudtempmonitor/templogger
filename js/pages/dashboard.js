@@ -1,7 +1,7 @@
 // js/pages/dashboard.js
 import { getUser, getActiveInstitution } from "../core/state.js";
 import { getFriendlyAlarmMessage } from "../utils/helpers.js";
-import { auth, db } from "../services/firebase.js";
+import { db } from "../services/firebase.js";
 import {
   doc,
   getDoc,
@@ -10,8 +10,9 @@ import {
   query,
   where,
   onSnapshot,
+  disableNetwork,
+enableNetwork,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { showNotification } from "../ui/notifications.js";
 import {
   requestNotificationPermission,
@@ -28,16 +29,15 @@ let alarmListeners = {};
 let activeAlarms = new Set();
 let lastValidReadings = {};
 const OFFLINE_THRESHOLD_SECONDS = 200;
-let isReconnecting = false;
 let deferredPrompt = null;
 let installButton = null;
+let isSilentReconnecting = false;
+let statusIntervalId = null;
 
 // Init: Após auth, carrega dados
 document.addEventListener("DOMContentLoaded", async () => {
-  // 1. Inicializa overlay PWA desktop
   checkInstallOverlay();
   
-  // 2. Verifica usuário
   const user = getUser();
 
   if (user) {
@@ -76,92 +76,64 @@ async function initDashboard() {
   const uiTree = await buildUiTree(institution.id);
   renderDashboard(uiTree);
 
-  setInterval(checkAllDeviceStatus, 60000);
+  statusIntervalId = setInterval(checkAllDeviceStatus, 60000);
   checkAllDeviceStatus();
 }
 
+
+
 function setupReconnectionHandler() {
-  document.addEventListener("visibilitychange", () => {
+  document.addEventListener("visibilitychange", async () => {
     if (document.visibilityState === "visible") {
-      console.log("→ App visível. Recarregando dados...");
-      isReconnecting = true;
+      console.log("→ App visível. Reconexão silenciosa iniciada...");
       
-      setTimeout(async () => {
-        if (typeof checkAllDeviceStatus === 'function') {
-          // Força uma verificação imediata
-          checkAllDeviceStatus();
-          
-          // Se houver dados, tenta "acordar" o Firestore
-          if (Object.keys(allDevicesConfig).length > 0) {
-            const primeiroMac = Object.keys(allDevicesConfig)[0];
-            try {
-              await getDoc(doc(db, "dispositivos", primeiroMac));
-            } catch (err) {
-              console.log("Teste de reconexão Firestore:", err.message);
-            }
-          }
-          
-          setTimeout(() => {
-             isReconnecting = false;
-            console.log("→ Segundo teste de reconexão...");
-            checkAllDeviceStatus();
-          }, 3000);
-        }
-      }, 500);
-    }
-  });
+      isSilentReconnecting = true; 
 
-  //  Também monitora conexão de rede
-  window.addEventListener('online', () => {
-    console.log("→ Navegador online. Atualizando...");
-    if (typeof checkAllDeviceStatus === 'function') {
-      checkAllDeviceStatus();
-    }
-  });
+      try {
+        await disableNetwork(db);
+        await enableNetwork(db);
+        console.log("→ Rede resetada com sucesso.");
+      } catch (err) {
+        console.error("Erro no reset da rede:", err);
+      }
 
-  window.addEventListener('offline', () => {
-    console.log("→ Navegador offline. Marcando como offline...");
-    Object.keys(deviceStatus).forEach(mac => {
-      deviceStatus[mac] = "OFFLINE";
-    });
-    updateAllCards();
+      setTimeout(() => {
+         console.log("→ Fim da reconexão silenciosa. Validando status real...");
+         
+         isSilentReconnecting = false;
+         
+         checkAllDeviceStatus(); 
+      }, 3000); 
+    }
   });
 }
 
 // Constrói a hierarquia uiTree (instituição > unidade > setor > devices)
 async function buildUiTree(instId) {
-  // 1. Busca dados da Instituição
   const instDoc = await getDoc(doc(db, "instituicoes", instId));
   if (!instDoc.exists()) return null;
   const instData = instDoc.data();
 
-  // Estrutura base que o renderDashboard espera
   const result = {
     id: instId,
     nome: instData.nome || "Instituição",
-    unidades: [], // Array vazio para começar
+    unidades: [],
   };
 
-  // 2. Busca TODAS as unidades dessa instituição
   const unitsQuery = query(
     collection(db, "unidades"),
     where("instituicaoId", "==", instId),
   );
   const unitsSnapshot = await getDocs(unitsQuery);
 
-  // Se não tiver unidades, retorna logo
   if (unitsSnapshot.empty) return result;
 
-  // 3. Busca TODOS os setores dessas unidades
-
-  // Buscar também TODOS os dispositivos da instituição 
   const devicesQuery = query(
     collection(db, "dispositivos"),
     where("instituicaoID", "==", instId),
   );
   const devicesSnapshot = await getDocs(devicesQuery);
 
-  // Cria um mapa de dispositivos agrupados por SetorID para acesso rápido
   const devicesBySector = {};
   devicesSnapshot.forEach((doc) => {
     const data = doc.data();
@@ -169,17 +141,14 @@ async function buildUiTree(instId) {
 
     if (!devicesBySector[sectorId]) devicesBySector[sectorId] = [];
 
-    // Adiciona o dispositivo à lista do setor, salvando o MAC (id do doc) e a config
     devicesBySector[sectorId].push({
       mac: doc.id,
       ...data,
     });
 
-    //Atualizar o cache global de configurações
     allDevicesConfig[doc.id] = data;
   });
 
-  // 4. Monta a árvore Unidade -> Setor -> Dispositivos
   for (const unitDoc of unitsSnapshot.docs) {
     const unitData = unitDoc.data();
     const unitId = unitDoc.id;
@@ -190,7 +159,6 @@ async function buildUiTree(instId) {
       setores: [],
     };
 
-    // Busca setores desta unidade
     const sectorsQuery = query(
       collection(db, "setores"),
       where("unidadeId", "==", unitId),
@@ -201,10 +169,8 @@ async function buildUiTree(instId) {
       const sectorId = sectorDoc.id;
       const sectorData = sectorDoc.data();
 
-      // Pega os dispositivos deste setor do mapa pré-carregado
       const setorDispositivos = devicesBySector[sectorId] || [];
 
-      // Só adiciona o setor se tiver nome
       unidadeObj.setores.push({
         id: sectorId,
         nome: sectorData.nome || "Setor Sem Nome",
@@ -212,11 +178,9 @@ async function buildUiTree(instId) {
       });
     });
 
-    // Adiciona a unidade completa à lista
     result.unidades.push(unidadeObj);
   }
 
-  // Ordena unidades por nome
   result.unidades.sort((a, b) => a.nome.localeCompare(b.nome));
 
   return result;
@@ -268,15 +232,12 @@ function renderDashboard(uiTree) {
   }
 
   uiTree.unidades.forEach((unidade) => {
-    // Filtra apenas setores que possuem dispositivos
     const setoresComDispositivos = (unidade.setores || []).filter(
       (setor) => setor.dispositivos && setor.dispositivos.length > 0,
     );
 
-    // Se a unidade não tiver nenhum setor com dispositivos, ignora
     if (setoresComDispositivos.length === 0) return;
 
-    // Cria a Unidade
     const unitSection = document.createElement("section");
     unitSection.className = "unit-section";
 
@@ -285,7 +246,6 @@ function renderDashboard(uiTree) {
     unitName.textContent = unidade.nome;
     unitSection.appendChild(unitName);
 
-    // Renderiza apenas setores válidos
     setoresComDispositivos.forEach((setor) => {
       const sectorSection = document.createElement("section");
       sectorSection.className = "sector-section";
@@ -318,14 +278,9 @@ function renderDashboard(uiTree) {
   });
 }
 
-// =========================================================================
 // FUNÇÃO DE RENDERIZAÇÃO DO CARD
-// =========================================================================
-
 function checkDeviceStatus(mac) {
-  if (isReconnecting) {
-    deviceStatus[mac] = "SINCRONIZANDO";
-    if (deviceCards[mac]) updateCardContent(deviceCards[mac], mac);
+  if (isSilentReconnecting) {
     return;
   }
 
@@ -529,10 +484,8 @@ function checkInstallOverlay() {
   const agora = new Date().getTime();
   const umDia = 24 * 60 * 60 * 1000;
 
-  // Se já instalou, não faz nada
   if (window.matchMedia("(display-mode: standalone)").matches) return;
 
-  // Só mostra se for Desktop e se passou mais de 24h desde o último "fechar"
   if (window.innerWidth > 1024 && (!lastTime || agora - lastTime > umDia)) {
     setTimeout(() => {
       document.getElementById("desktop-install-overlay").style.display =
@@ -541,37 +494,25 @@ function checkInstallOverlay() {
   }
 }
 
-// Ao clicar em fechar
 document.querySelector(".close-overlay").addEventListener("click", () => {
   document.getElementById("desktop-install-overlay").style.display = "none";
   localStorage.setItem("pwa_prompt_timestamp", new Date().getTime());
 });
 
-// ======================================================
 // 6. INSTALAÇÃO DO PWA
-// ======================================================
-
-
-
-// 1. Captura o evento de instalação
 window.addEventListener("beforeinstallprompt", (e) => {
-  // Previne o prompt automático
   e.preventDefault();
 
-  // Armazena o evento para uso posterior
   deferredPrompt = e;
 
-  // Mostra o botão de instalação após 3 segundos
   setTimeout(showInstallButton, 3000);
 });
 
-// 2. Função para mostrar botão de instalação
 function showInstallButton() {
   if (isPWAInstalled() || document.getElementById("pwa-install-button") || window.innerWidth > 1024) {
     return;
   }
 
-  // Cria o botão
   installButton = document.createElement("button");
   installButton.id = "pwa-install-button";
   installButton.innerHTML = `
@@ -583,7 +524,6 @@ function showInstallButton() {
     <span style="margin-left: auto;">↓</span>
   `;
 
-  // Estilos
   installButton.style.cssText = `
     position: fixed;
     bottom: 70px;
@@ -605,7 +545,6 @@ function showInstallButton() {
     transition: all 0.3s ease;
   `;
 
-  // Adiciona animação
   const style = document.createElement("style");
   style.textContent = `
     @keyframes slideInUp {
@@ -637,13 +576,10 @@ function showInstallButton() {
   `;
   document.head.appendChild(style);
 
-  // Evento de clique
   installButton.addEventListener("click", installPWA);
 
-  // Adiciona ao documento
   document.body.appendChild(installButton);
 
-  // Remove após 30 segundos
   setTimeout(() => {
     if (installButton && document.body.contains(installButton)) {
       hideInstallButton();
@@ -659,13 +595,10 @@ async function installPWA() {
   }
 
   try {
-    // Mostra o prompt de instalação
     deferredPrompt.prompt();
 
-    // Aguarda a resposta do usuário
     const choiceResult = await deferredPrompt.userChoice;
     if (choiceResult.outcome === "accepted") {
-      // Sucesso na instalação
       installButton.innerHTML = "✅ Instalado! O app será aberto em breve...";
       installButton.style.background = "#28a745";
       installButton.style.animation = "none";
@@ -673,7 +606,6 @@ async function installPWA() {
       setTimeout(hideInstallButton, 2000);
     }
 
-    // Limpa o prompt
     deferredPrompt = null;
   } catch (error) {
     installButton.innerHTML = "❌ Erro na instalação";
@@ -701,7 +633,6 @@ function startAlarmListener(mac) {
 
       deviceAlarmStatus[mac] = alarmData;
 
-      // notificação toast quando entra em alarme
       const wasActive = activeAlarms.has(mac);
       const isNowActive = alarmData.ativo === true;
 
@@ -721,7 +652,6 @@ function startAlarmListener(mac) {
         activeAlarms.delete(mac);
       }
 
-      // Atualiza o card visualmente
       if (deviceCards[mac]) {
         updateCardContent(deviceCards[mac], mac);
       }
@@ -786,17 +716,14 @@ let resizeTimeout;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimeout);
   resizeTimeout = setTimeout(() => {
-    // Atualiza layout responsivo
     if (Object.keys(deviceCards).length > 0) {
       updateAllCards();
     }
   }, 250);
 });
 
-// 2. Cache de dispositivos offline
 const offlineCache = {};
 
-// 3. Adicione cleanup ao sair da página
 window.addEventListener('beforeunload', () => {
   clearAllListeners();
   if (installButton) {
@@ -811,10 +738,3 @@ function updateAllCards() {
     }
   }
 }
-
-  // 3. Configura PWA mobile 
-  setTimeout(() => {
-    if (!isPWAInstalled() && deferredPrompt) {
-      showInstallButton();
-    }
-  }, 2000);
