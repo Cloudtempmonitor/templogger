@@ -1,5 +1,5 @@
 // ==========================================================================
-// CONFIG-DEVICES.JS — Versão Final (Correção de Selects + CSS + Modal)
+// CONFIG-DEVICES.JS
 // ==========================================================================
 
 import { db } from "../services/firebase.js";
@@ -232,7 +232,7 @@ function renderDevicesGrid(devices) {
                   </div>
                   <div class="data-row">
                       <small>Limites Umidade</small>
-                      <strong>${minUmidade}°C <i class="fas fa-arrows-alt-h" style="font-size:0.7em; color:#ccc;"></i> ${maxUmidade}°C</strong>
+                      <strong>${minUmidade}% <i class="fas fa-arrows-alt-h" style="font-size:0.7em; color:#ccc;"></i> ${maxUmidade}%</strong>
                   </div>
               </div>
               
