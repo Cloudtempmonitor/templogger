@@ -477,6 +477,10 @@ function renderSetores(unitId, forceClear = false) {
 
 
 function setupTableListeners() {
+    if (contentArea.dataset.listenersAttached === "true") {
+        return; 
+    }
+
     // Botão principal para nova instituição
     const addNewInstMain = document.getElementById("add-new-inst-main");
     if (addNewInstMain) {
@@ -552,6 +556,8 @@ function setupTableListeners() {
             }
         }
     });
+
+    contentArea.dataset.listenersAttached = "true";
 }
 
 
