@@ -1,26 +1,26 @@
 // =========================================
-// NOTIFICATIONS.JS (OTIMIZADO)
+// NOTIFICATIONS.JS (COM DEDUPLICAÇÃO)
 // =========================================
 
 const notificationQueue = [];
 let isShowingNotification = false;
 
-// Configuração de ícones e cores (Centralizado)
+// Variável para armazenar a última notificação e evitar duplicidade
+let lastNotificationLog = { message: '', timestamp: 0 };
+
 const TOAST_CONFIG = {
     info: { icon: 'ℹ️', color: '#3498db', defaultTitle: 'Aviso' },
     success: { icon: '✅', color: '#2ecc71', defaultTitle: 'Sucesso!' },
     error: { icon: '❌', color: '#e74c3c', defaultTitle: 'Erro!' }
 };
 
-/**
- * Cria o elemento HTML do Toast
- */
+// ... (createToastElement permanece igual) ...
 function createToastElement(notif) {
     const config = TOAST_CONFIG[notif.type] || TOAST_CONFIG.info;
     const finalTitle = notif.title === 'Aviso' ? config.defaultTitle : notif.title;
 
     const div = document.createElement('div');
-    div.className = 'notification-toast'; // Classe base
+    div.className = 'notification-toast'; 
     div.setAttribute('role', 'alert');
     div.style.borderLeft = `5px solid ${config.color}`;
 
@@ -37,9 +37,25 @@ function createToastElement(notif) {
 }
 
 /**
- * Exibe uma notificação em formato toast com fila e auto-close.
+ * Exibe uma notificação em formato toast com fila e filtro anti-spam.
  */
 export function showNotification(message, type = 'info', title = 'Aviso', autoCloseMs = 5000) {
+    
+    // --- LÓGICA ANTI-DUPLICIDADE (NOVO) ---
+    const now = Date.now();
+    const isSameMessage = message === lastNotificationLog.message;
+    const isRecent = (now - lastNotificationLog.timestamp) < 3000; // 3 segundos de tolerância
+
+    // Se for a mesma mensagem e faz menos de 3s, ignora silenciosamente
+    if (isSameMessage && isRecent) {
+        console.log("Notificação duplicada ignorada:", message);
+        return;
+    }
+
+    // Atualiza o log da última mensagem
+    lastNotificationLog = { message, timestamp: now };
+    // --------------------------------------
+
     if (!['info', 'success', 'error'].includes(type)) type = 'info';
     notificationQueue.push({ message, type, title, autoCloseMs });
     processQueue();
@@ -54,24 +70,20 @@ function processQueue() {
 
     document.body.appendChild(toast);
 
-    // Força um reflow para garantir que a transição CSS funcione
     requestAnimationFrame(() => {
         toast.classList.add('show');
     });
 
     console.log(`[NOTIFICAÇÃO:${notif.type.toUpperCase()}] ${notif.title}: ${notif.message}`);
 
-    // Lógica de fechamento
     let timeoutId = null;
     
-    // Auto-close (exceto para erros, a menos que especificado)
     if (notif.type !== 'error' || notif.autoCloseMs > 0) {
         if (notif.autoCloseMs > 0) {
             timeoutId = setTimeout(() => closeToast(toast), notif.autoCloseMs);
         }
     }
 
-    // Eventos de Click
     const closeBtn = toast.querySelector('.notification-close-btn');
     closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -79,7 +91,6 @@ function processQueue() {
         closeToast(toast);
     });
 
-    // Fecha ao clicar no corpo do toast (UX Mobile)
     toast.addEventListener('click', () => {
         if (timeoutId) clearTimeout(timeoutId);
         closeToast(toast);
@@ -87,26 +98,20 @@ function processQueue() {
 }
 
 function closeToast(toast) {
-    // Remove a classe .show para disparar a animação de saída do CSS
     toast.classList.remove('show');
 
-    // Aguarda o fim da transição CSS para remover do DOM
     toast.addEventListener('transitionend', () => {
         if (toast.parentNode) {
             toast.remove();
         }
         isShowingNotification = false;
-        // Pequeno delay para não sobrepor animações se houver muitos na fila
         setTimeout(processQueue, 100); 
     }, { once: true });
 }
 
-/**
- * Modal de Confirmação (Promise-based)
- */
+// ... (showConfirmation permanece igual) ...
 export function showConfirmation(message, title = "Confirmar Ação") {
   return new Promise((resolve) => {
-    // 1. Remove qualquer overlay existente para evitar duplicidade
     const existingOverlay = document.querySelector(".notification-confirm-overlay");
     if (existingOverlay) existingOverlay.remove();
 
@@ -128,10 +133,8 @@ export function showConfirmation(message, title = "Confirmar Ação") {
 
     document.body.appendChild(overlay);
 
-    // 2. Removido o excesso de requestAnimationFrame que travava o primeiro clique
     const box = overlay.querySelector(".notification-confirm-box");
     
-    // Pequeno atraso apenas para a animação visual, sem bloquear eventos
     setTimeout(() => {
         overlay.style.opacity = "1";
     }, 10);
@@ -140,14 +143,12 @@ export function showConfirmation(message, title = "Confirmar Ação") {
       overlay.style.opacity = "0";
       overlay.style.pointerEvents = "none"; 
       
-      // Remove do DOM após a animação de saída
       setTimeout(() => {
         overlay.remove();
         resolve(value);
       }, 200);
     };
 
-    // 3. Uso de click direto sem travas
     overlay.querySelector(".notification-btn-confirm").addEventListener("click", (e) => {
       e.preventDefault();
       cleanup(true);
@@ -158,7 +159,6 @@ export function showConfirmation(message, title = "Confirmar Ação") {
       cleanup(false);
     });
 
-    // Fecha ao clicar no fundo escuro (overlay)
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) cleanup(false);
     });

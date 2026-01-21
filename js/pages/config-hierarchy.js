@@ -46,24 +46,18 @@ export async function adminHierarchy() {
     try {
         console.log("Iniciando adminHierarchy...");
         
-        // 1. Mostra loading e esconde conteúdo
         if (loadingEl) loadingEl.style.display = "block";
         if (contentEl) contentEl.style.display = "none";
         
-        // 2. Carrega cache da hierarquia
         await loadHierarchyCache();
         hierarchyCache = getCachedHierarchy();
         
-        // 3. Verifica e atualiza seleções atuais
         checkAndUpdateSelection();
         
-        // 4. Renderiza view principal
         await showHierarchyView();
         
-        // 5. Configura listeners
         setupTableListeners();
         
-        // 6. Esconde loading e mostra conteúdo
         if (loadingEl) loadingEl.style.display = "none";
         if (contentEl) contentEl.style.display = "block";
         
@@ -187,7 +181,6 @@ async function showHierarchyView() {
 function renderInstituicoes() {
     const list = document.getElementById("inst-list");
     const countEl = document.getElementById("inst-count");
-    // O ID do botão de adicionar instituição (verifique se é este mesmo no seu HTML)
     const btnAdd = document.getElementById("add-new-inst") || document.getElementById("btn-add-inst"); 
 
     if (!list || !countEl) return;
@@ -195,7 +188,7 @@ function renderInstituicoes() {
     list.innerHTML = "";
 
     const currentUser = getUser();
-    const activeInst = getActiveInstitution(); // MUDANÇA: Pega a instituição ativa
+    const activeInst = getActiveInstitution(); 
 
     if (!currentUser) return;
 
@@ -211,7 +204,7 @@ function renderInstituicoes() {
         // Habilita botão de adicionar
         if (btnAdd) btnAdd.style.display = "flex"; 
     } else {
-        // MUDANÇA: Admin vê APENAS a instituição ativa no momento
+        // Admin vê APENAS a instituição ativa no momento
         if (activeInst && activeInst.id) {
             instituicoesPermitidas = (hierarchyCache.instituicoes || []).filter(inst => 
                 inst.id === activeInst.id
@@ -249,7 +242,7 @@ function renderInstituicoes() {
              li.classList.add("active");
         }
 
-        // MUDANÇA: Botões de ação apenas para SuperAdmin
+        //Botões de ação apenas para SuperAdmin
         const actionsHtml = hasRole(ROLES.SUPER_ADMIN) ? 
             `<div class="item-actions">
                 <button class="edit-btn" data-id="${inst.id}" title="Editar">
@@ -267,7 +260,7 @@ function renderInstituicoes() {
         `;
 
         // ============================================================
-        // EVENTO DE CLIQUE (Mantido sua lógica de limpeza)
+        // EVENTO DE CLIQUE 
         // ============================================================
         li.addEventListener("click", (e) => {
             if (e.target.closest(".item-actions")) return;
@@ -286,13 +279,11 @@ function renderInstituicoes() {
 
             // Atualiza seleção global
             currentSelectedInstId = inst.id;
-            currentSelectedUnitId = null; // Reseta a unidade selecionada
+            currentSelectedUnitId = null; 
 
-            // Mostra botão de adicionar unidade (Se não for SuperAdmin, talvez queira checar permissão aqui também)
+            // Mostra botão de adicionar unidade 
             const addUnitBtn = document.getElementById("add-new-unit");
             if (addUnitBtn) {
-                // Admin pode adicionar unidade? Se sim, mostre. 
-                // Se a regra for "Admin edita o que tem dentro", então block.
                 addUnitBtn.style.display = "block"; 
             }
 
@@ -310,8 +301,6 @@ function renderInstituicoes() {
         list.appendChild(li);
     });
 
-    // AUTO-SELEÇÃO PARA ADMIN
-    // Se só tem uma instituição na lista e nenhuma selecionada, clica nela automaticamente
     if (instituicoesPermitidas.length === 1 && !currentSelectedInstId) {
         const firstLi = list.querySelector("li");
         if (firstLi) firstLi.click();
@@ -752,14 +741,12 @@ function getUnidadeNome(unitId) {
 
 
 function checkAndUpdateSelection() {
-    // Verifica se a instituição selecionada ainda existe
     if (currentSelectedInstId) {
         const instExists = (hierarchyCache.instituicoes || []).some(inst => inst.id === currentSelectedInstId);
         if (!instExists) {
             currentSelectedInstId = null;
             currentSelectedUnitId = null;
             
-            // Atualiza a view
             renderInstituicoes();
             renderUnidades(null);
             renderSetores(null, true);
@@ -767,13 +754,11 @@ function checkAndUpdateSelection() {
         }
     }
     
-    // Verifica se a unidade selecionada ainda existe e pertence à instituição
     if (currentSelectedUnitId) {
         const unit = (hierarchyCache.unidades || []).find(u => u.id === currentSelectedUnitId);
         if (!unit || (currentSelectedInstId && unit.instituicaoId !== currentSelectedInstId)) {
             currentSelectedUnitId = null;
             
-            // Atualiza a view
             renderUnidades(currentSelectedInstId);
             renderSetores(null, true);
         }
@@ -785,15 +770,12 @@ function checkAndUpdateSelection() {
    OPERAÇÕES CRUD
    ========================================================================== */
 
-// Adicione o parâmetro 'formRef' no final
 async function saveHierarchyItem(type, docId, closeModal, formRef) {
     const currentUser = getUser();
     if (!currentUser) return;
 
-    // CORREÇÃO 3: Definir o contexto de busca (Formulário ou Documento)
     const context = formRef || document;
 
-    // Buscar botões dentro do contexto correto
     const saveButton = context.querySelector(".admin-button-save") || document.querySelector(".admin-button-save");
     
     const originalBtnText = saveButton ? saveButton.innerHTML : "";
@@ -802,8 +784,6 @@ async function saveHierarchyItem(type, docId, closeModal, formRef) {
         saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
     }
 
-    // CORREÇÃO 4: Usar context.querySelector em vez de document.getElementById
-    // Isso garante que pegamos o valor do modal ATUAL
     const nomeInput = context.querySelector("#nome");
     const nome = nomeInput ? nomeInput.value.trim() : "";
 
@@ -824,7 +804,6 @@ async function saveHierarchyItem(type, docId, closeModal, formRef) {
             updatedBy:currentUser.uid 
         };
 
-        // Captura inputs opcionais usando o contexto
         const cnpjInput = context.querySelector("#cnpj");
         const enderecoInput = context.querySelector("#endereco");
 
@@ -883,7 +862,6 @@ async function saveHierarchyItem(type, docId, closeModal, formRef) {
             await loadHierarchyCache(true);
             hierarchyCache = getCachedHierarchy();
             await showHierarchyView();
-            setupTableListeners();
         } catch (viewError) {
             console.error("Erro ao atualizar a visualização:", viewError);
         }
@@ -899,14 +877,10 @@ async function saveHierarchyItem(type, docId, closeModal, formRef) {
     }
 }
 
-/* ==========================================================================
-   OPERAÇÕES CRUD
-   ========================================================================== */
 async function deleteHierarchyItem(type, docId, itemName, closeModal) {
     const currentUser = getUser();
     if (!currentUser) return;
 
-    // 1. Verifica permissão
     if (type === "instituicao" && !hasRole(ROLES.SUPER_ADMIN)) {
         showNotification("Apenas Super Admin pode excluir instituições", "error");
         return;
@@ -918,7 +892,6 @@ async function deleteHierarchyItem(type, docId, itemName, closeModal) {
         return;
     }
 
-    // 2. Verifica se há dispositivos vinculados (IoT)
     let hasDevices = false;
     try {
         let fieldName;
@@ -935,7 +908,6 @@ async function deleteHierarchyItem(type, docId, itemName, closeModal) {
         return; 
     }
 
-    // 3. Verifica se há dependências hierárquicas (Filhos: Unidades ou Setores)
     let hasDependencies = false;
     let dependencyMessage = "";
 
@@ -957,21 +929,15 @@ async function deleteHierarchyItem(type, docId, itemName, closeModal) {
             break;
     }
 
-    // =================================================================================
-    // 4. BLOQUEIOS (HARD BLOCKS) 
-    // =================================================================================
-
-    // Bloqueio 1: Tem dispositivos?
     if (hasDevices) {
         showNotification(
             `Não é possível excluir ${type} "${itemName}" porque existem dispositivos vinculados a ele. ` +
             `Desvincule os dispositivos antes de excluir.`,
             "error"
         );
-        return; // PARE AQUI
+        return; 
     }
 
-    // Bloqueio 2: Tem filhos (hierarquia)?
     if (hasDependencies) {
         showNotification(
             `Não é possível excluir ${type} "${itemName}". ` +
@@ -979,22 +945,15 @@ async function deleteHierarchyItem(type, docId, itemName, closeModal) {
             `Você deve excluir os itens filhos antes de remover este item pai.`,
             "error"
         );
-        return; // PARE AQUI
+        return; 
     }
 
-    // =================================================================================
-    // 5. EXECUÇÃO (Se chegou aqui, está livre para apagar)
-    // =================================================================================
-
-    // Constrói mensagem de confirmação simples
     const confirmationMessage = `Tem certeza que deseja excluir ${type} "${itemName}"?<br><br>` +
         `<small>Este item não possui dispositivos nem sub-itens vinculados.</small>`;
 
-    // Solicita confirmação final do usuário
-    const confirmed = await showConfirmation(confirmationMessage, "Confirmar Exclusão");
+        const confirmed = await showConfirmation(confirmationMessage, "Confirmar Exclusão");
     if (!confirmed) return;
 
-    // Executa a exclusão no banco
     try {
         let collectionName;
         switch (type) {
@@ -1008,11 +967,9 @@ async function deleteHierarchyItem(type, docId, itemName, closeModal) {
 
         if (closeModal) closeModal();
 
-        // Atualiza cache e view
         await loadHierarchyCache(true);
         hierarchyCache = getCachedHierarchy();
         await showHierarchyView();
-        setupTableListeners();
 
     } catch (error) {
         console.error(`Erro ao excluir ${type}:`, error);
@@ -1020,37 +977,3 @@ async function deleteHierarchyItem(type, docId, itemName, closeModal) {
     }
 }
 
-(async () => {
-    console.log("config-hierarchy: auto-inicializando...");
-    
-    // Aguarda o DOM estar pronto (se necessário)
-    if (document.readyState === 'loading') {
-        await new Promise(resolve => 
-            document.addEventListener('DOMContentLoaded', resolve)
-        );
-    }
-    
-    try {
-        await adminHierarchy();
-        console.log("config-hierarchy: inicializado com sucesso");
-    } catch (error) {
-        console.error("config-hierarchy: erro na auto-inicialização:", error);
-        // Opcional: mostrar erro na tela
-        const contentArea = document.getElementById("admin-content-area");
-        if (contentArea) {
-            contentArea.innerHTML = `
-                <div style="color: #dc2626; padding: 40px; text-align: center;">
-                    <h3>Erro ao carregar página</h3>
-                    <p>${error.message}</p>
-                    <button onclick="location.reload()" 
-                            style="margin-top: 20px; padding: 10px 20px; 
-                                   background: #3498db; color: white; 
-                                   border: none; border-radius: 6px; 
-                                   cursor: pointer;">
-                        Tentar novamente
-                    </button>
-                </div>
-            `;
-        }
-    }
-})();
