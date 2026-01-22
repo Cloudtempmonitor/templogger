@@ -12,54 +12,54 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const messaging = firebase.messaging();
 
 // Handler de mensagens em Segundo Plano
 messaging.onBackgroundMessage((payload) => {
   console.log('[Service Worker] Recebeu payload:', payload);
 
-  // 1. Tenta pegar Título e Corpo de vários lugares possíveis (para não dar erro)
-  const notificationTitle = 
-      payload.notification?.title || 
-      payload.data?.titulo || 
-      "Novo Alarme!";
+  // 1. PREVENÇÃO DE DUPLICIDADE
+  // Se a mensagem enviada pelo Backend (ou Console) já tem o campo "notification",
+  // o navegador exibe automaticamente. Não precisamos fazer nada.
+  if (payload.notification) {
+    return; 
+  }
 
+  // 2. CASO SEJA APENAS DADOS (Data Message)
+  // Aqui montamos a notificação manualmente (cenário ideal para produção)
+  const notificationTitle = payload.data?.titulo || "Novo Alarme!";
   const notificationOptions = {
-    body: 
-      payload.notification?.body || 
-      payload.data?.mensagem || 
-      "Verifique o painel para detalhes.",
-      
-    // 2. IMPORTANTE: Ícone absoluto ou URL externa para evitar erro 404
-    // Se não tiver certeza que o arquivo existe, comente a linha abaixo.
-    icon: '/img/icon-192.png', 
-    
-    // Mantém os dados extras para quando clicar
+    body: payload.data?.mensagem || "Verifique o painel.",
+    icon: '/templogger/public/img/icon-192.png', // Caminho absoluto seguro para GitHub Pages
     data: payload.data
   };
 
-  // 3. Exibe a notificação explicitamente
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Listener de clique na notificação (Para abrir o app ao clicar)
+// Listener de clique na notificação
 self.addEventListener('notificationclick', function(event) {
   console.log('[Service Worker] Notificação clicada.');
   event.notification.close();
 
   event.waitUntil(
-    clients.matchAll({type: 'window'}).then( windowClients => {
-      // Tenta focar numa aba já aberta
+    clients.matchAll({type: 'window', includeUncontrolled: true}).then( windowClients => {
+      
+      // 3. CORREÇÃO DO LINK 404
+      // Usa o escopo de registro do SW para saber a URL base correta (/templogger/)
+      const urlToOpen = self.registration.scope; 
+
+      // Se já tiver uma aba aberta, foca nela
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
-        if (client.url.indexOf('/') !== -1 && 'focus' in client) {
+        if (client.url.startsWith(urlToOpen) && 'focus' in client) {
           return client.focus();
         }
       }
-      // Se não, abre a página principal
+      
+      // Se não, abre a página principal correta
       if (clients.openWindow) {
-        return clients.openWindow('./index.html'); // Ajuste o caminho se necessário
+        return clients.openWindow(urlToOpen);
       }
     })
   );
