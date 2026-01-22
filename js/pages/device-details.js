@@ -503,6 +503,7 @@ async function openAlarmGraph(alarmEvent, deviceConfig) {
     }
 
     modal.style.display = "flex";
+    setupMobileTabs();
     setTimeout(() => modal.classList.add("show"), 50);
 }
 
@@ -632,17 +633,103 @@ function verificarMudancasLimites(inicio, fim) {
 
 document.getElementById("export-png-btn").addEventListener("click", () => {
     const modalContent = document.querySelector("#alarm-graph-modal .modal-content");
-    if (!modalContent) return showNotification("Erro: Modal não encontrado.", "error");
-    const deviceName = document.getElementById("modal-device-name").textContent.trim();
-    const startTime = document.getElementById("modal-alarm-start").textContent.trim().replace(/[:\/]/g, "-");
-    showNotification("Gerando imagem...", "info");
-    html2canvas(modalContent, { scale: 1.5, useCORS: true, backgroundColor: "#ffffff" })
+    const modalBody = document.querySelector("#alarm-graph-modal .modal-body");
+    
+    //  SALVA O ESTADO ATUAL (qual aba está aberta)
+    const wasChartActive = modalBody.classList.contains("tab-chart-active");
+    
+    //  FORÇA MODO DESKTOP TEMPORÁRIO (Remove classes de aba)
+    modalBody.classList.remove("tab-data-active");
+    modalBody.classList.remove("tab-chart-active");
+    
+    showNotification("Gerando imagem completa...", "info");
+    
+    // Força uma largura mínima para simular desktop 
+    const originalWidth = modalContent.style.width;
+    // Se estiver no celular, tenta forçar largura maior para o print ficar "wide"
+    if (window.innerWidth < 768) {
+        modalContent.style.minWidth = "1000px"; 
+    }
+
+    setTimeout(() => {
+        html2canvas(modalContent, {
+            scale: 2, 
+            useCORS: true,
+            backgroundColor: "#ffffff",
+            windowWidth: 1200 
+        })
         .then((canvas) => {
+            // RESTAURA O ESTADO ORIGINAL
+            modalContent.style.minWidth = ""; 
+            if (window.innerWidth < 768) {
+                if (wasChartActive) {
+                    modalBody.classList.add("tab-chart-active");
+                } else {
+                    modalBody.classList.add("tab-data-active");
+                }
+            }
+
+            // Download
+            const deviceName = document.getElementById("modal-device-name").textContent.trim();
             const a = document.createElement("a");
             a.href = canvas.toDataURL("image/jpeg", 0.9);
-            a.download = `Alarme_${deviceName}_${startTime}.jpg`;
+            a.download = `Alarme_${deviceName}.jpg`;
             a.click();
-            showNotification("Imagem exportada!", "success");
+            showNotification("Relatório exportado!", "success");
         })
-        .catch(err => { console.error(err); showNotification("Falha ao gerar imagem.", "error"); });
+        .catch(err => {
+            console.error(err);
+            modalContent.style.minWidth = ""; 
+             if (window.innerWidth < 768) {
+                if (wasChartActive) modalBody.classList.add("tab-chart-active");
+                else modalBody.classList.add("tab-data-active");
+            }
+            showNotification("Falha ao gerar imagem.", "error");
+        });
+    }, 100); 
 });
+
+function setupMobileTabs() {
+    const modalBody = document.querySelector("#alarm-graph-modal .modal-body");
+    const header = document.querySelector("#alarm-graph-modal .modal-header");
+    
+    // Verifica se já criamos as abas para não duplicar
+    if (document.getElementById("mobile-tab-controls")) return;
+
+    const tabControls = document.createElement("div");
+    tabControls.id = "mobile-tab-controls";
+    tabControls.className = "mobile-tab-controls";
+    tabControls.innerHTML = `
+        <button class="mobile-tab-btn active" data-target="data">📋 Detalhes</button>
+        <button class="mobile-tab-btn" data-target="chart">📈 Gráfico</button>
+    `;
+
+    // Insere logo após o header e antes do body
+    header.parentNode.insertBefore(tabControls, modalBody);
+
+    // Inicializa estado (Dados visíveis por padrão)
+    modalBody.classList.add("tab-data-active");
+    modalBody.classList.remove("tab-chart-active");
+
+    // Listeners
+    const btns = tabControls.querySelectorAll(".mobile-tab-btn");
+    btns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            // Remove active de todos
+            btns.forEach(b => b.classList.remove("active"));
+            // Adiciona no clicado
+            btn.classList.add("active");
+
+            const target = btn.getAttribute("data-target");
+            if (target === "data") {
+                modalBody.classList.add("tab-data-active");
+                modalBody.classList.remove("tab-chart-active");
+            } else {
+                modalBody.classList.remove("tab-data-active");
+                modalBody.classList.add("tab-chart-active");
+                // Importante: Forçar resize do chart ao ficar visível
+                if (window.modalChartInstance) window.modalChartInstance.resize(); // Se tiver acesso à instância
+            }
+        });
+    });
+}
