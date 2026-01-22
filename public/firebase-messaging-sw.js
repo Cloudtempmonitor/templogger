@@ -34,3 +34,26 @@ messaging.onBackgroundMessage((payload) => {
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
+self.addEventListener('notificationclick', function(event) {
+  console.log('[Service Worker] Notificação clicada.');
+
+  event.notification.close(); // Fecha a notificação
+
+  // Tenta abrir a janela ou focar se já estiver aberta
+  event.waitUntil(
+    clients.matchAll({type: 'window'}).then( windowClients => {
+      // Se já tiver uma aba aberta, foca nela
+      for (var i = 0; i < windowClients.length; i++) {
+        var client = windowClients[i];
+        if (client.url.indexOf('/') !== -1 && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Se não, abre uma nova (Ajuste a URL conforme necessário)
+      if (clients.openWindow) {
+        return clients.openWindow('./index.html');
+      }
+    })
+  );
+});

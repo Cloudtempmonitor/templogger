@@ -1,5 +1,6 @@
 // js/services/push-notification.js
 
+import { showNotification } from "../ui/notifications.js";
 import { db, messaging } from "./firebase.js";
 import { doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
@@ -51,14 +52,30 @@ export function listenToForegroundMessages() {
     onMessage(messaging, (payload) => {
         console.log('🚨 Mensagem recebida com o site aberto:', payload);
         
-        // Tenta tocar um som de alerta (opcional)
-         const audio = new Audio('/sons/alerta.mp3');
-         audio.play().catch(e => console.log("Navegador bloqueou o som automático"));
-
-        // Cria um alerta visual simples no navegador
-        const titulo = payload.notification.title || "Alarme!";
-        const corpo = payload.notification.body || "Verifique o painel.";
+        const titulo = payload.notification?.title || "Novo Alarme!";
+        const corpo = payload.notification?.body || "Verifique os detalhes.";
         
-        alert(`${titulo}\n\n${corpo}`);
+        // Tentar Notificação Nativa (mesmo com app aberto)
+        if (Notification.permission === "granted") {
+            const notification = new Notification(titulo, {
+                body: corpo,
+                icon: './img/icon-192.png' 
+            });
+            
+            notification.onclick = () => {
+                // Ao clicar, foca na janela ou abre URL
+                window.focus();
+                notification.close();
+            };
+        } 
+        // OPÇÃO 2: chame sua função de showNotification
+        else {
+            
+            showNotification(`${titulo}: ${corpo}`, "warning");
+            alert(`${titulo}\n${corpo}`); // Fallback
+        }
+
+        const audio = new Audio('./assets/sounds/alerta.mp3'); 
+        audio.play().catch(() => console.log("Som silenciado pelo navegador"));
     });
 }
