@@ -7,30 +7,25 @@ export class DeviceChartManager {
     }
 
     /**
-     * Renderiza o gráfico principal da página de detalhes
-     * @param {string} canvasId - ID do elemento canvas
-     * @param {Array} readings - Array de objetos de leitura
+     * Renderiza o gráfico principal
      */
     renderMainChart(canvasId, readings) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
-        // Limpa instância anterior para evitar sobreposição/glitch
         if (this.mainChart) {
             this.mainChart.destroy();
             this.mainChart = null;
         }
 
         const data = this._processData(readings);
-        const config = this._getChartConfig(data, false); // false = não é modal 
+        const config = this._getChartConfig(data, false);
 
         this.mainChart = new Chart(ctx, config);
     }
 
     /**
-     * Renderiza o gráfico dentro do Modal de Alarmes
-     * @param {string} canvasId - ID do elemento canvas
-     * @param {Array} readings - Array de objetos de leitura
+     * Renderiza o gráfico do Modal
      */
     renderModalChart(canvasId, readings) {
         const ctx = document.getElementById(canvasId);
@@ -42,14 +37,11 @@ export class DeviceChartManager {
         }
 
         const data = this._processData(readings);
-        const config = this._getChartConfig(data, true); // true = é modal
+        const config = this._getChartConfig(data, true);
 
         this.modalChart = new Chart(ctx, config);
     }
 
-    /**
-     * Destrói os gráficos manualmente 
-     */
     destroyAll() {
         if (this.mainChart) this.mainChart.destroy();
         if (this.modalChart) this.modalChart.destroy();
@@ -60,18 +52,35 @@ export class DeviceChartManager {
     // =========================================
 
     /**
-     * Transforma os dados brutos do Firebase no formato do Chart.js
+     * Transforma e AMOSTRA os dados para visualização
      */
     _processData(readings) {
+        const isMobile = window.innerWidth < 768;
+
+        // CÁLCULO DO LIMITE DE PONTOS (TAXA FIXA)
+        // 1 leitura a cada 5 min = 12/hora = 288/dia.
+        // 3 dias = 864 pontos.
+        // Desktop: Fixamos em ~864 pontos para evitar saturação visual.
+        // Mobile: Mantemos 300 para performance em telas pequenas.
+        const maxPoints = isMobile ? 300 : 864;
+        
+        let dataToProcess = readings;
+
+        // Lógica de Decimação (Downsampling)
+        if (readings.length > maxPoints) {
+            const step = Math.ceil(readings.length / maxPoints);
+            // Pega 1 ponto a cada 'step'
+            dataToProcess = readings.filter((_, index) => index % step === 0);
+        }
+
         const labels = [];
         const temperatures = [];
         const ambientTemps = [];
         const humidities = [];
 
-        readings.forEach((reading) => {
+        dataToProcess.forEach((reading) => {
             if (typeof reading.timestamp !== "number") return;
             const date = new Date(reading.timestamp * 1000);
-            // Formatação curta para mobile, longa para desktop 
             labels.push(date.toLocaleString("pt-BR"));
             
             temperatures.push(reading.temperatura ?? null);
@@ -82,9 +91,6 @@ export class DeviceChartManager {
         return { labels, temperatures, ambientTemps, humidities };
     }
 
-    /**
-     * Gera a configuração do Chart.js baseada no dispositivo (Mobile/Desktop)
-     */
     _getChartConfig(data, isModal) {
         const isMobile = window.innerWidth < 768;
 
@@ -96,38 +102,37 @@ export class DeviceChartManager {
                     {
                         label: "Sonda (°C)",
                         data: data.temperatures,
-                        borderColor: "#e74c3c", 
+                        borderColor: "#e74c3c",
                         backgroundColor: "rgba(231, 76, 60, 0.1)",
                         fill: true,
-                        // Mobile: sem pontos (0), linha mais fina. Desktop: pontos (3)
-                        pointRadius: isMobile ? 0 : 3,
-                        pointHoverRadius: isMobile ? 4 : 6,
-                        borderWidth: isMobile ? 1.5 : 2,
+                        pointRadius: 0, 
+                        pointHoverRadius: 6, 
+                        borderWidth: 2,      
                         tension: 0.1,
                         spanGaps: true,
                     },
                     {
                         label: "Ambiente (°C)",
                         data: data.ambientTemps,
-                        borderColor: "#3498db", 
+                        borderColor: "#3498db",
                         backgroundColor: "rgba(52, 152, 219, 0.1)",
                         fill: true,
-                        pointRadius: isMobile ? 0 : 3,
-                        pointHoverRadius: isMobile ? 4 : 6,
-                        borderWidth: isMobile ? 1.5 : 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        borderWidth: 2,
                         tension: 0.1,
                         spanGaps: true,
                     },
                     {
                         label: "Umidade (%)",
                         data: data.humidities,
-                        borderColor: "#2ecc71", 
+                        borderColor: "#2ecc71",
                         backgroundColor: "rgba(46, 204, 113, 0.1)",
                         fill: true,
                         yAxisID: "y1",
-                        pointRadius: isMobile ? 0 : 3,
-                        pointHoverRadius: isMobile ? 4 : 6,
-                        borderWidth: isMobile ? 1.5 : 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        borderWidth: 2,
                         tension: 0.1,
                         spanGaps: true,
                     },
@@ -135,24 +140,20 @@ export class DeviceChartManager {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false, // Permite que o CSS controle a altura (para o mobile)
-                
+                maintainAspectRatio: false,
                 interaction: {
-                    mode: 'index',      // Mostra todos os datasets do mesmo índice X
-                    intersect: false,   // Ativa o tooltip mesmo sem passar em cima do ponto
+                    mode: 'index',
+                    intersect: false,
                 },
-                
                 plugins: {
                     legend: {
                         position: 'top',
                         labels: {
-                            // Diminui a fonte da legenda no celular
                             boxWidth: isMobile ? 10 : 40,
                             font: { size: isMobile ? 10 : 12 }
                         }
                     },
                     tooltip: {
-                        // Tooltip um pouco maior no mobile 
                         titleFont: { size: isMobile ? 13 : 14 },
                         bodyFont: { size: isMobile ? 12 : 13 },
                         padding: 10,
@@ -161,12 +162,9 @@ export class DeviceChartManager {
                 },
                 scales: {
                     x: {
-                        title: { display: !isMobile, text: "Horário" }, // Esconde título do eixo no mobile para ganhar espaço
-                        grid: {
-                            display: !isMobile // Remove grades verticais no mobile 
-                        },
+                        title: { display: !isMobile, text: "Horário" },
+                        grid: { display: !isMobile },
                         ticks: {
-                            // No mobile, limita o número de datas exibidas 
                             maxTicksLimit: isMobile ? 4 : 12,
                             maxRotation: 0,
                             font: { size: isMobile ? 10 : 12 }
