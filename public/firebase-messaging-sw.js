@@ -1,10 +1,7 @@
 // firebase-messaging-sw.js
-// Este arquivo roda em segundo plano para escutar notificações
-
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-// Configuração do Firebase (A mesma do seu firebase.js)
 const firebaseConfig = {
   apiKey: "AIzaSyAawMA2HjEgBZ5gYIawMYECTp0oN4hj6YE",
   authDomain: "temptracker-eb582.firebaseapp.com",
@@ -14,45 +11,55 @@ const firebaseConfig = {
   appId: "1:1079337208340:web:0b86faa43e141f0ff1b501",
 };
 
-// Inicializa o Firebase no Service Worker
 firebase.initializeApp(firebaseConfig);
 
-// Recupera a instância de mensagens
 const messaging = firebase.messaging();
 
-// (Opcional) Configura o comportamento quando receber mensagem em Background
+// Handler de mensagens em Segundo Plano
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Mensagem recebida em background:', payload);
+  console.log('[Service Worker] Recebeu payload:', payload);
 
-  // Customiza a notificação visual
-  const notificationTitle = payload.notification.title;
+  // 1. Tenta pegar Título e Corpo de vários lugares possíveis (para não dar erro)
+  const notificationTitle = 
+      payload.notification?.title || 
+      payload.data?.titulo || 
+      "Novo Alarme!";
+
   const notificationOptions = {
-    body: payload.notification.body,
-    icon: './img/favicon.png', // Certifique-se que essa imagem existe ou remova essa linha
+    body: 
+      payload.notification?.body || 
+      payload.data?.mensagem || 
+      "Verifique o painel para detalhes.",
+      
+    // 2. IMPORTANTE: Ícone absoluto ou URL externa para evitar erro 404
+    // Se não tiver certeza que o arquivo existe, comente a linha abaixo.
+   // icon: '/img/icon-192.png', 
+    
+    // Mantém os dados extras para quando clicar
     data: payload.data
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  // 3. Exibe a notificação explicitamente
+  return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+// Listener de clique na notificação (Para abrir o app ao clicar)
 self.addEventListener('notificationclick', function(event) {
   console.log('[Service Worker] Notificação clicada.');
+  event.notification.close();
 
-  event.notification.close(); // Fecha a notificação
-
-  // Tenta abrir a janela ou focar se já estiver aberta
   event.waitUntil(
     clients.matchAll({type: 'window'}).then( windowClients => {
-      // Se já tiver uma aba aberta, foca nela
+      // Tenta focar numa aba já aberta
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
         if (client.url.indexOf('/') !== -1 && 'focus' in client) {
           return client.focus();
         }
       }
-      // Se não, abre uma nova (Ajuste a URL conforme necessário)
+      // Se não, abre a página principal
       if (clients.openWindow) {
-        return clients.openWindow('./index.html');
+        return clients.openWindow('./index.html'); // Ajuste o caminho se necessário
       }
     })
   );
