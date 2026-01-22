@@ -289,8 +289,14 @@ function renderStats(readings, deviceConfig) {
     const calculateMetrics = (readingKey, configKey) => {
         const values = readings
             .map((r) => r[readingKey])
-            .filter((v) => v !== null && v !== undefined && typeof v === "number");
+            .filter((v) => 
+                v !== null && 
+                v !== undefined && 
+                typeof v === "number" && 
+                v !== -127 // <--- IGNORA ERRO DE SONDA NAS CONTAS
+            );
 
+        // Pega os limites do firmware 
         const minLimit = deviceConfig?.alarmeMin?.[configKey];
         const maxLimit = deviceConfig?.alarmeMax?.[configKey];
         let hasError = false;
@@ -298,58 +304,74 @@ function renderStats(readings, deviceConfig) {
         if (values.length === 0) {
             return { avg: "N/A", max: "N/A", min: "N/A", minLimit, maxLimit, hasError };
         }
-
+        
         const sum = values.reduce((a, b) => a + b, 0);
         const avg = (sum / values.length);
         const max = Math.max(...values);
         const min = Math.min(...values);
 
+        // Verifica se min/max ultrapassaram os limites
         if ((minLimit !== undefined && min < minLimit) || (maxLimit !== undefined && max > maxLimit)) {
             hasError = true;
         }
-
+        
         return { avg, max, min, minLimit, maxLimit, hasError };
     };
 
+    // Calcula para os 3 sensores
     const sondaStats = calculateMetrics("temperatura", "sonda");
     const ambStats = calculateMetrics("temperaturaAmbiente", "temperaturaAmbiente");
     const umidStats = calculateMetrics("umidade", "umidade");
 
+    // Helper para formatar uma linha (Min ou Max)
     const formatStatLine = (label, value, limit, unit, type) => {
         if (value === "N/A") return `<p><strong>${label}:</strong> N/A</p>`;
+        
         let isError = false;
         let limitStr = "";
+        
         if (limit !== undefined && limit !== null) {
             limitStr = ` / (Limite: ${limit.toFixed(1)}${unit})`;
             if (type === 'min' && value < limit) isError = true;
             if (type === 'max' && value > limit) isError = true;
         }
-        return `<p class="${isError ? 'stat-error' : ''}"><strong>${label}:</strong> ${value.toFixed(2)}${unit}<span class="stat-limit">${limitStr}</span></p>`;
+        
+        // Garante formatação correta para número
+        const valueStr = (typeof value === 'number') ? value.toFixed(2) : value;
+        
+        return `<p class="${isError ? 'stat-error' : ''}">
+                    <strong>${label}:</strong> ${valueStr}${unit}
+                    <span class="stat-limit">${limitStr}</span>
+                </p>`;
     };
 
+    // Helper para formatar a Média
     const formatAvgLine = (label, value, unit) => {
-        if (value === "N/A") return `<p><strong>${label}:</strong> N/A</p>`;
-        return `<p><strong>${label}:</strong> ${value.toFixed(2)}${unit}</p>`;
+         if (value === "N/A") return `<p><strong>${label}:</strong> N/A</p>`;
+         return `<p><strong>${label}:</strong> ${value.toFixed(2)}${unit}</p>`;
     };
 
+    // Monta o HTML final com os 3 cartões
     summaryEl.innerHTML = `
         <div class="stats-card ${sondaStats.hasError ? 'error-card' : ''}">
             <h4>🌡️ Temperatura Sonda</h4>
-            ${formatAvgLine("Média", sondaStats.avg, "°C")}
-            ${formatStatLine("Mínima", sondaStats.min, sondaStats.minLimit, "°C", 'min')}
             ${formatStatLine("Máxima", sondaStats.max, sondaStats.maxLimit, "°C", 'max')}
+            ${formatStatLine("Mínima", sondaStats.min, sondaStats.minLimit, "°C", 'min')}
+            ${formatAvgLine("Média", sondaStats.avg, "°C")}
         </div>
+        
         <div class="stats-card ${ambStats.hasError ? 'error-card' : ''}">
             <h4>🌡️ Temperatura Ambiente</h4>
-            ${formatAvgLine("Média", ambStats.avg, "°C")}
-            ${formatStatLine("Mínima", ambStats.min, ambStats.minLimit, "°C", 'min')}
             ${formatStatLine("Máxima", ambStats.max, ambStats.maxLimit, "°C", 'max')}
+            ${formatStatLine("Mínima", ambStats.min, ambStats.minLimit, "°C", 'min')}
+            ${formatAvgLine("Média", ambStats.avg, "°C")}
         </div>
+        
         <div class="stats-card ${umidStats.hasError ? 'error-card' : ''}">
             <h4>💧 Umidade</h4>
-            ${formatAvgLine("Média", umidStats.avg, "%")}
-            ${formatStatLine("Mínima", umidStats.min, umidStats.minLimit, "%", 'min')}
             ${formatStatLine("Máxima", umidStats.max, umidStats.maxLimit, "%", 'max')}
+            ${formatStatLine("Mínima", umidStats.min, umidStats.minLimit, "%", 'min')}
+            ${formatAvgLine("Média", umidStats.avg, "%")}
         </div>
     `;
 }
@@ -512,7 +534,6 @@ function closeModal() {
     modal.classList.remove("show");
     setTimeout(() => {
         modal.style.display = "none";
-        // O ChartManager lidará com a destruição na próxima renderização
     }, 300);
 }
 
@@ -534,7 +555,6 @@ async function getAlarmPeriodReadings(alarmEvent) {
 }
 
 // --- Helpers de Formatação (formatEventPeaks, formatEventDetails, formatLimites, etc...)
-
 function formatEventDetails(alarmEvent, config) {
     const startLimites = alarmEvent.limitesIniciais || {};
     const endLimites = alarmEvent.limitesFinais || {};
@@ -634,42 +654,85 @@ function verificarMudancasLimites(inicio, fim) {
 document.getElementById("export-png-btn").addEventListener("click", () => {
     const modalContent = document.querySelector("#alarm-graph-modal .modal-content");
     const modalBody = document.querySelector("#alarm-graph-modal .modal-body");
-    
-    //  SALVA O ESTADO ATUAL (qual aba está aberta)
+    const dataPanel = document.querySelector("#alarm-graph-modal .event-data-panel");
+    const chartPanel = document.querySelector("#alarm-graph-modal .chart-panel");
+
     const wasChartActive = modalBody.classList.contains("tab-chart-active");
-    
-    //  FORÇA MODO DESKTOP TEMPORÁRIO (Remove classes de aba)
+    const originalStyles = {
+        contentHeight: modalContent.style.height,
+        contentMaxHeight: modalContent.style.maxHeight,
+        contentOverflow: modalContent.style.overflow,
+        contentWidth: modalContent.style.width,
+        contentMinWidth: modalContent.style.minWidth,
+        
+        bodyOverflow: modalBody.style.overflowY,
+        bodyHeight: modalBody.style.height,
+        bodyDisplay: modalBody.style.display,
+        bodyGrid: modalBody.style.gridTemplateColumns,
+        bodyGap: modalBody.style.gap,
+        
+        dataPanelWidth: dataPanel.style.width,
+        chartPanelWidth: chartPanel.style.width
+    };
+
+    showNotification("Gerando imagem completa...", "info");
+
     modalBody.classList.remove("tab-data-active");
     modalBody.classList.remove("tab-chart-active");
     
-    showNotification("Gerando imagem completa...", "info");
+    modalContent.style.height = "auto";
+    modalContent.style.maxHeight = "none";
+    modalContent.style.overflow = "visible";
+    modalBody.style.overflowY = "visible";
+    modalBody.style.height = "auto";
+
+    modalContent.style.width = "1200px";     
+    modalContent.style.minWidth = "1200px";  
     
-    // Força uma largura mínima para simular desktop 
-    const originalWidth = modalContent.style.width;
-    // Se estiver no celular, tenta forçar largura maior para o print ficar "wide"
-    if (window.innerWidth < 768) {
-        modalContent.style.minWidth = "1000px"; 
-    }
+    modalBody.style.setProperty("display", "grid", "important");
+    modalBody.style.setProperty("grid-template-columns", "1fr 2fr", "important");
+    modalBody.style.setProperty("gap", "20px", "important");
+
+    dataPanel.style.setProperty("width", "auto", "important");
+    chartPanel.style.setProperty("width", "auto", "important");
+    
+    if (window.modalChartInstance) window.modalChartInstance.resize();
 
     setTimeout(() => {
         html2canvas(modalContent, {
-            scale: 2, 
+            scale: 2,
             useCORS: true,
             backgroundColor: "#ffffff",
-            windowWidth: 1200 
+            scrollY: 0,
+            windowWidth: 1200, 
+            width: 1200       
         })
         .then((canvas) => {
-            // RESTAURA O ESTADO ORIGINAL
-            modalContent.style.minWidth = ""; 
-            if (window.innerWidth < 768) {
-                if (wasChartActive) {
-                    modalBody.classList.add("tab-chart-active");
-                } else {
-                    modalBody.classList.add("tab-data-active");
-                }
-            }
+            modalContent.style.height = originalStyles.contentHeight;
+            modalContent.style.maxHeight = originalStyles.contentMaxHeight;
+            modalContent.style.overflow = originalStyles.contentOverflow;
+            modalContent.style.width = originalStyles.contentWidth;
+            modalContent.style.minWidth = originalStyles.contentMinWidth;
+            
+            modalBody.style.overflowY = originalStyles.bodyOverflow;
+            modalBody.style.height = originalStyles.bodyHeight;
+            modalBody.style.removeProperty("display");
+            modalBody.style.removeProperty("grid-template-columns");
+            modalBody.style.removeProperty("gap");
 
-            // Download
+            dataPanel.style.width = originalStyles.dataPanelWidth;
+            dataPanel.style.removeProperty("width"); 
+            
+            chartPanel.style.width = originalStyles.chartPanelWidth;
+            chartPanel.style.removeProperty("width");
+
+            if (window.innerWidth < 768) {
+                if (wasChartActive) modalBody.classList.add("tab-chart-active");
+                else modalBody.classList.add("tab-data-active");
+            }
+            
+            if (window.modalChartInstance) window.modalChartInstance.resize();
+
             const deviceName = document.getElementById("modal-device-name").textContent.trim();
             const a = document.createElement("a");
             a.href = canvas.toDataURL("image/jpeg", 0.9);
@@ -679,21 +742,16 @@ document.getElementById("export-png-btn").addEventListener("click", () => {
         })
         .catch(err => {
             console.error(err);
-            modalContent.style.minWidth = ""; 
-             if (window.innerWidth < 768) {
-                if (wasChartActive) modalBody.classList.add("tab-chart-active");
-                else modalBody.classList.add("tab-data-active");
-            }
+            location.reload(); 
             showNotification("Falha ao gerar imagem.", "error");
         });
-    }, 100); 
+    }, 300); 
 });
 
 function setupMobileTabs() {
     const modalBody = document.querySelector("#alarm-graph-modal .modal-body");
     const header = document.querySelector("#alarm-graph-modal .modal-header");
     
-    // Verifica se já criamos as abas para não duplicar
     if (document.getElementById("mobile-tab-controls")) return;
 
     const tabControls = document.createElement("div");
@@ -704,20 +762,15 @@ function setupMobileTabs() {
         <button class="mobile-tab-btn" data-target="chart">📈 Gráfico</button>
     `;
 
-    // Insere logo após o header e antes do body
     header.parentNode.insertBefore(tabControls, modalBody);
 
-    // Inicializa estado (Dados visíveis por padrão)
     modalBody.classList.add("tab-data-active");
     modalBody.classList.remove("tab-chart-active");
 
-    // Listeners
     const btns = tabControls.querySelectorAll(".mobile-tab-btn");
     btns.forEach(btn => {
         btn.addEventListener("click", () => {
-            // Remove active de todos
             btns.forEach(b => b.classList.remove("active"));
-            // Adiciona no clicado
             btn.classList.add("active");
 
             const target = btn.getAttribute("data-target");
@@ -727,8 +780,7 @@ function setupMobileTabs() {
             } else {
                 modalBody.classList.remove("tab-data-active");
                 modalBody.classList.add("tab-chart-active");
-                // Importante: Forçar resize do chart ao ficar visível
-                if (window.modalChartInstance) window.modalChartInstance.resize(); // Se tiver acesso à instância
+                if (window.modalChartInstance) window.modalChartInstance.resize(); 
             }
         });
     });
