@@ -30,7 +30,7 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.data?.titulo || "Novo Alarme!";
   const notificationOptions = {
     body: payload.data?.mensagem || "Verifique o painel.",
-    icon: '../public/img/icon-192.png', // Caminho absoluto seguro para GitHub Pages
+    icon: '.img/icon-192.png', // Caminho absoluto seguro para GitHub Pages
     data: payload.data
   };
 
