@@ -33,7 +33,7 @@ messaging.onBackgroundMessage((payload) => {
       
     // 2. IMPORTANTE: Ícone absoluto ou URL externa para evitar erro 404
     // Se não tiver certeza que o arquivo existe, comente a linha abaixo.
-    icon: './img/icon-192.png', 
+    icon: './img/favicon.png', 
     
     // Mantém os dados extras para quando clicar
     data: payload.data
