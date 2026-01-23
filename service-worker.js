@@ -88,41 +88,41 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// --- 3. CLIQUE NA NOTIFICAÇÃO ---
-self.addEventListener('notificationclick', function(event) {
+self.addEventListener('notificationclick', event => {
   event.notification.close();
 
-  const targetUrl = 'https://cloudtempmonitor.github.io/templogger/index.html';
+  const urlToOpen = 'https://cloudtempmonitor.github.io/templogger/index.html';
 
   event.waitUntil(
-    clients.matchAll({type: 'window', includeUncontrolled: true}).then(windowClients => {
-      
-      let clientFound = false;
-      
-      for (let client of windowClients) {
-        if (client.url.includes('cloudtempmonitor.github.io')) {
-          clientFound = true;
-          
-          // Tenta focar primeiro
-          if ('focus' in client) {
-            client.focus();
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(clientsArr => {
+        // Tenta focar janela já aberta no mesmo domínio
+        for (const client of clientsArr) {
+          if (client.url.startsWith('https://cloudtempmonitor.github.io/')) {
+            // Tenta focar
+            if ('focus' in client) {
+              return client.focus().then(focusedClient => {
+                // Se quiser forçar navegação mesmo assim (opcional)
+                if (focusedClient.url !== urlToOpen && 'navigate' in focusedClient) {
+                  return focusedClient.navigate(urlToOpen);
+                }
+              });
+            }
+            return client.focus();
           }
-          
-          // Verifica se podemos usar postMessage para comunicar com a página
-          if (client.postMessage && client.url !== targetUrl) {
-            // Envia uma mensagem para a página navegar internamente
-            // A página precisa ter um listener para 'message' que execute window.location.href
-            client.postMessage({type: 'NAVIGATE', url: targetUrl});
-          }
-          
-          break;
         }
-      }
-      
-      // Se não encontrou nenhuma janela aberta, abre uma nova
-      if (!clientFound && clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    })
+
+        // Não achou → abre nova janela com URL completa
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+      .catch(err => {
+        console.error('Erro no notificationclick:', err);
+        // Fallback: tenta abrir mesmo assim
+        if (clients.openWindow) {
+          clients.openWindow(urlToOpen);
+        }
+      })
   );
 });
