@@ -3,8 +3,9 @@
 import { showNotification } from "../ui/notifications.js";
 import { db, messaging } from "./firebase.js";
 import { doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-import { onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+
+// Mantenha sua chave VAPID
 const VAPID_KEY = "BLNp-LcDo57ZWUR7BsbWZ6BuPjVRuuiMrexFQ8emJAx1tOGalPhej9yKm-ibFgx4w2l8HorT6nm-r8NAw--cW8o"; 
 
 export async function requestNotificationPermission(userId) {
@@ -14,15 +15,22 @@ export async function requestNotificationPermission(userId) {
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
-            console.log("🔔 Permissão concedida! Registrando SW manualmente...");
+            console.log("🔔 Permissão concedida!");
 
-            const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-            
-            await navigator.serviceWorker.ready;
+            // --- CORREÇÃO 1: Usar o SW principal já existente ---
+            // Não registramos mais o 'firebase-messaging-sw.js'
+            // Buscamos o registro do service-worker.js que o index.html já carregou
+            const registration = await navigator.serviceWorker.getRegistration('./service-worker.js');
 
+            if (!registration) {
+                console.error("❌ Service Worker principal não encontrado. Recarregue a página.");
+                return;
+            }
+
+            // Passamos o registro correto para o getToken
             const currentToken = await getToken(messaging, { 
                 vapidKey: VAPID_KEY,
-                serviceWorkerRegistration: registration
+                serviceWorkerRegistration: registration 
             });
 
             if (currentToken) {
@@ -52,30 +60,22 @@ export function listenToForegroundMessages() {
     onMessage(messaging, (payload) => {
         console.log('🚨 Mensagem recebida com o site aberto:', payload);
         
-        const titulo = payload.notification?.title || "Novo Alarme!";
-        const corpo = payload.notification?.body || "Verifique os detalhes.";
+        // Prioriza o título da notificação (console) ou dados (futuro backend)
+        const titulo = payload.notification?.title || payload.data?.titulo || "Novo Alarme!";
+        const corpo = payload.notification?.body || payload.data?.mensagem || "Verifique os detalhes.";
         
-        // Tentar Notificação Nativa (mesmo com app aberto)
-        if (Notification.permission === "granted") {
-            const notification = new Notification(titulo, {
-                body: corpo,
-                icon: './img/icon-192.png' 
-            });
-            
-            notification.onclick = () => {
-                // Ao clicar, foca na janela ou abre URL
-                window.focus();
-                notification.close();
-            };
-        } 
-        // OPÇÃO 2: chame sua função de showNotification
-        else {
-            
-            showNotification(`${titulo}: ${corpo}`, "warning");
-            alert(`${titulo}\n${corpo}`); // Fallback
-        }
 
-        const audio = new Audio('./assets/sounds/alerta.mp3'); 
-        audio.play().catch(() => console.log("Som silenciado pelo navegador"));
+        // 1. Tocar Som (ajuste o caminho ../ ou ./ conforme a estrutura de pastas real)
+        const audio = new Audio('../assets/sounds/alerta.mp3'); 
+        audio.play().catch(() => console.log("Som silenciado pelo navegador (interação necessária)"));
+
+        // 2. Mostrar Alerta Visual (Toast/Div)
+        // Isso garante que o usuário veja o aviso sem poluir a barra de notificações do Android/Windows
+        if (typeof showNotification === 'function') {
+            showNotification(`${titulo}: ${corpo}`, "warning");
+        } else {
+            console.warn("Função showNotification não encontrada, usando alert.");
+            alert(`${titulo}\n${corpo}`);
+        }
     });
 }
