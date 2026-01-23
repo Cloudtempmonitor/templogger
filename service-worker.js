@@ -92,15 +92,22 @@ self.addEventListener('fetch', event => {
 // --- 3. CLIQUE NA NOTIFICAÇÃO ---
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-const targetUrl = self.registration.scope + '/index.html';
+
+  const targetUrl = 'https://cloudtempmonitor.github.io/templogger/index.html';
+
   event.waitUntil(
     clients.matchAll({type: 'window', includeUncontrolled: true}).then(windowClients => {
+      
       for (let client of windowClients) {
-        if (client.url.startsWith(baseUrl) && 'focus' in client) {
-          return client.focus();
+        if (client.url.includes('cloudtempmonitor.github.io') && 'focus' in client) {
+          return client.focus().then((focusedClient) => {
+            return focusedClient.navigate(targetUrl); 
+          });
         }
       }
-      if (clients.openWindow) return clients.openWindow(baseUrl);
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
     })
   );
 });
