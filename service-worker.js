@@ -1,4 +1,4 @@
-// public/service-worker.js
+// service-worker.js
 
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
@@ -92,7 +92,7 @@ self.addEventListener('fetch', event => {
 // --- 3. CLIQUE NA NOTIFICAÇÃO ---
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-const targetUrl = self.registration.scope + '/templogger/public/index.html';
+const targetUrl = self.registration.scope + 'index.html';
   event.waitUntil(
     clients.matchAll({type: 'window', includeUncontrolled: true}).then(windowClients => {
       for (let client of windowClients) {
