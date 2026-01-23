@@ -18,23 +18,29 @@ const messaging = firebase.messaging();
 
 // --- HANDLER DE BACKGROUND ---
 messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Payload recebido:', payload);
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-  // [CORREÇÃO DA DUPLICIDADE]
-  // Se o payload tem a propriedade 'notification', o SDK do Firebase já exibiu 
-  // a notificação automaticamente. Paramos aqui para não duplicar.
+  // ────────────────────────────────────────────────
+  // CASO 1: Mensagem do Firebase Console (tem .notification)
+  // ────────────────────────────────────────────────
+  // O SDK já exibiu a notificação automaticamente → NÃO crie outra
   if (payload.notification) {
-    console.log('[SW] Notificação automática do Console/SDK detectada. Ignorando criação manual.');
-    return; 
+    console.log('[SW] Ignorando → notificação automática do FCM já foi exibida');
+    return;
   }
 
-  // Se chegou aqui, é uma mensagem silenciosa (Data Message) vinda do seu futuro Backend via API.
-  // Então criamos a notificação manualmente.
-  const notificationTitle = payload.data?.titulo || "Novo Alarme";
+  // ────────────────────────────────────────────────
+  // CASO 2: Mensagem só com data (seu backend futuro)
+  // ────────────────────────────────────────────────
+  // Aqui você cria a notificação manualmente
+  const notificationTitle = payload.data?.titulo || payload.data?.title || 'Alarme TempTracker';
   const notificationOptions = {
-    body: payload.data?.mensagem || "Verifique o painel.",
-    icon: './img/icon-192.png',
-    data: payload.data || {}
+    body: payload.data?.mensagem || payload.data?.body || 'Verifique o painel agora.',
+    icon: './img/icon-192.png',           // seu ícone
+    badge: './img/badge.png',              // opcional
+    data: payload.data || {},
+    // tag: 'alguma-tag-unica',            // opcional: evita duplicatas do navegador
+    // renotify: true,                      // opcional
   };
 
   return self.registration.showNotification(notificationTitle, notificationOptions);
