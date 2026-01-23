@@ -1,6 +1,5 @@
 // public/service-worker.js
 
-// --- 1. CONFIGURAÇÃO DO FIREBASE ---
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
@@ -30,17 +29,13 @@ messaging.onBackgroundMessage((payload) => {
   }
 
   // ────────────────────────────────────────────────
-  // CASO 2: Mensagem só com data (seu backend futuro)
+  // CASO 2: Mensagem só com data 
   // ────────────────────────────────────────────────
-  // Aqui você cria a notificação manualmente
   const notificationTitle = payload.data?.titulo || payload.data?.title || 'Alarme TempTracker';
   const notificationOptions = {
     body: payload.data?.mensagem || payload.data?.body || 'Verifique o painel agora.',
-    icon: './img/icon-192.png',           // seu ícone
-    badge: './img/badge.png',              // opcional
+    icon: './img/icon-192.png',           
     data: payload.data || {},
-    // tag: 'alguma-tag-unica',            // opcional: evita duplicatas do navegador
-    // renotify: true,                      // opcional
   };
 
   return self.registration.showNotification(notificationTitle, notificationOptions);
@@ -65,7 +60,7 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Força a atualização imediata do SW
+  self.skipWaiting(); 
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
@@ -79,12 +74,11 @@ self.addEventListener('activate', event => {
           if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
         })
       );
-    }).then(() => self.clients.claim()) // Assume o controle da página imediatamente
+    }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
-  // Ignora requisições externas (Firebase, Google Fonts, etc)
   if (!event.request.url.startsWith(self.location.origin)) return;
 
   event.respondWith(
@@ -98,8 +92,7 @@ self.addEventListener('fetch', event => {
 // --- 3. CLIQUE NA NOTIFICAÇÃO ---
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  const baseUrl = self.registration.scope;
-
+const targetUrl = self.registration.scope + 'index.html';
   event.waitUntil(
     clients.matchAll({type: 'window', includeUncontrolled: true}).then(windowClients => {
       for (let client of windowClients) {

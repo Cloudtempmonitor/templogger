@@ -41,7 +41,7 @@ function createToastElement(notif) {
  */
 export function showNotification(message, type = 'info', title = 'Aviso', autoCloseMs = 5000) {
     
-    // --- LÓGICA ANTI-DUPLICIDADE (NOVO) ---
+    // --- LÓGICA ANTI-DUPLICIDADE
     const now = Date.now();
     const isSameMessage = message === lastNotificationLog.message;
     const isRecent = (now - lastNotificationLog.timestamp) < 3000; // 3 segundos de tolerância

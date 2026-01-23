@@ -64,9 +64,6 @@ export function listenToForegroundMessages() {
         const titulo = payload.notification?.title || payload.data?.titulo || "Novo Alarme!";
         const corpo = payload.notification?.body || payload.data?.mensagem || "Verifique os detalhes.";
         
-
-        // 1. Tocar Som (ajuste o caminho ../ ou ./ conforme a estrutura de pastas real)
-        const audio = new Audio('../assets/sounds/alerta.mp3'); 
         audio.play().catch(() => console.log("Som silenciado pelo navegador (interação necessária)"));
 
         // 2. Mostrar Alerta Visual (Toast/Div)
