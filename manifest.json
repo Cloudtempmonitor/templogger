@@ -1,12 +1,12 @@
 {
   "name": "Cloud Temp Monitor",
   "short_name": "TempMonitor",
-  "start_url": "./index.html",
+  "start_url": "/templogger/index.html",
+  "scope": "/templogger/",
   "display": "standalone",
   "background_color": "#1e293b",
   "theme_color": "#2c3e50",  
   "orientation": "portrait",
-  "scope": "./",
   "icons": [
     {
       "src": "./img/icon-192.png",

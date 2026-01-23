@@ -91,7 +91,7 @@ self.addEventListener('fetch', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
 
-  const urlToOpen = 'https://cloudtempmonitor.github.io/templogger/index.html';
+  const urlToOpen = '/templogger/index.html';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
