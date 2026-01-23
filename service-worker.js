@@ -51,12 +51,12 @@ const urlsToCache = [
   './manifest.json',
   './img/favicon.png',
   './img/icon-192.png',
-  '../css/base.css',
-  '../css/menu.css',
-  '../css/dashboard.css',
-  '../js/core/auth.js',
-  '../js/ui/menu.js',
-  '../js/pages/dashboard.js'
+  './css/base.css',
+  './css/menu.css',
+  './css/dashboard.css',
+  './js/core/auth.js',
+  './js/ui/menu.js',
+  './js/pages/dashboard.js'
 ];
 
 self.addEventListener('install', event => {
