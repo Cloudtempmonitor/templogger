@@ -88,41 +88,23 @@ self.addEventListener('fetch', event => {
   );
 });
 
+
+
 self.addEventListener('notificationclick', event => {
   event.notification.close();
 
-  const urlToOpen = '/templogger/index.html';
+  const urlToOpen = new URL('/templogger/index.html', self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(clientsArr => {
-        // Tenta focar janela já aberta no mesmo domínio
-        for (const client of clientsArr) {
-          if (client.url.startsWith('https://cloudtempmonitor.github.io/')) {
-            // Tenta focar
-            if ('focus' in client) {
-              return client.focus().then(focusedClient => {
-                // Se quiser forçar navegação mesmo assim (opcional)
-                if (focusedClient.url !== urlToOpen && 'navigate' in focusedClient) {
-                  return focusedClient.navigate(urlToOpen);
-                }
-              });
-            }
-            return client.focus();
+      .then(windowClients => {
+        for (const client of windowClients) {
+          if (client.url.startsWith(self.location.origin)) {
+            return client.navigate(urlToOpen).then(() => client.focus());
           }
         }
 
-        // Não achou → abre nova janela com URL completa
-        if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
-        }
-      })
-      .catch(err => {
-        console.error('Erro no notificationclick:', err);
-        // Fallback: tenta abrir mesmo assim
-        if (clients.openWindow) {
-          clients.openWindow(urlToOpen);
-        }
+        return clients.openWindow(urlToOpen);
       })
   );
 });
