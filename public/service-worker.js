@@ -92,7 +92,7 @@ self.addEventListener('fetch', event => {
 // --- 3. CLIQUE NA NOTIFICAÇÃO ---
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-const targetUrl = self.registration.scope + '/templogger/public/index.htmls';
+const targetUrl = self.registration.scope + '/templogger/public/index.html';
   event.waitUntil(
     clients.matchAll({type: 'window', includeUncontrolled: true}).then(windowClients => {
       for (let client of windowClients) {
