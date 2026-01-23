@@ -1,8 +1,6 @@
 // public/service-worker.js
 
-// --------------------------------------------------------
-// 1. CONFIGURAÇÃO DO FIREBASE 
-// --------------------------------------------------------
+// --- 1. CONFIGURAÇÃO DO FIREBASE ---
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
@@ -18,17 +16,23 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Handler de Mensagens em Segundo Plano (Background)
+// --- HANDLER DE BACKGROUND ---
 messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Recebeu payload em background:', payload);
+  console.log('[SW] Payload recebido:', payload);
 
-  
-  // Se o seu backend envia { notification: ... }, COMENTE o bloco abaixo para evitar duplicidade.
-  // Se o seu backend envia apenas { data: ... }, mantenha o bloco abaixo.
-  
-  const notificationTitle = payload.notification?.title || payload.data?.titulo || "Novo Alarme!";
+  // [CORREÇÃO DA DUPLICIDADE]
+  // Se o payload tem a propriedade 'notification', o SDK do Firebase já exibiu 
+  // a notificação automaticamente. Paramos aqui para não duplicar.
+  if (payload.notification) {
+    console.log('[SW] Notificação automática do Console/SDK detectada. Ignorando criação manual.');
+    return; 
+  }
+
+  // Se chegou aqui, é uma mensagem silenciosa (Data Message) vinda do seu futuro Backend via API.
+  // Então criamos a notificação manualmente.
+  const notificationTitle = payload.data?.titulo || "Novo Alarme";
   const notificationOptions = {
-    body: payload.notification?.body || payload.data?.mensagem || "Verifique o painel.",
+    body: payload.data?.mensagem || "Verifique o painel.",
     icon: './img/icon-192.png',
     data: payload.data || {}
   };
@@ -37,9 +41,7 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 
-// --------------------------------------------------------
-// 2. LÓGICA DE CACHE (PWA)
-// --------------------------------------------------------
+// --- 2. CACHE PWA (OFFLINE) ---
 const CACHE_NAME = 'temptracker-v1';
 const urlsToCache = [
   './',
@@ -48,7 +50,6 @@ const urlsToCache = [
   './manifest.json',
   './img/favicon.png',
   './img/icon-192.png',
-  './img/icon-512.png',
   '../css/base.css',
   '../css/menu.css',
   '../css/dashboard.css',
@@ -58,37 +59,28 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  console.log('[SW] Instalando...');
+  self.skipWaiting(); // Força a atualização imediata do SW
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
 });
 
 self.addEventListener('activate', event => {
-  console.log('[SW] Ativando...');
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
+          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => self.clients.claim()) // Assume o controle da página imediatamente
   );
 });
 
 self.addEventListener('fetch', event => {
-  // Ignora requisições do Firebase/Google e API externa
-  if (event.request.url.includes('firebase') || 
-      event.request.url.includes('gstatic') ||
-      event.request.url.includes('googleapis')) {
-    return;
-  }
-  
+  // Ignora requisições externas (Firebase, Google Fonts, etc)
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
   event.respondWith(
     caches.match(event.request).then(response => {
       return response || fetch(event.request);
@@ -96,27 +88,20 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// --------------------------------------------------------
-// 3. HANDLER DE CLIQUE NA NOTIFICAÇÃO
-// --------------------------------------------------------
+
+// --- 3. CLIQUE NA NOTIFICAÇÃO ---
 self.addEventListener('notificationclick', function(event) {
-  console.log('[SW] Notificação clicada.');
   event.notification.close();
-  const baseUrl = self.registration.scope; // Geralmente a pasta onde está o SW
+  const baseUrl = self.registration.scope;
 
   event.waitUntil(
-    clients.matchAll({type: 'window', includeUncontrolled: true}).then( windowClients => {
-      // Tenta focar numa aba já aberta
-      for (var i = 0; i < windowClients.length; i++) {
-        var client = windowClients[i];
+    clients.matchAll({type: 'window', includeUncontrolled: true}).then(windowClients => {
+      for (let client of windowClients) {
         if (client.url.startsWith(baseUrl) && 'focus' in client) {
           return client.focus();
         }
       }
-      // Se não, abre nova janela
-      if (clients.openWindow) {
-        return clients.openWindow(baseUrl);
-      }
+      if (clients.openWindow) return clients.openWindow(baseUrl);
     })
   );
 });
