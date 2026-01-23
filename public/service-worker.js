@@ -1,4 +1,45 @@
 // public/service-worker.js
+
+// --------------------------------------------------------
+// 1. CONFIGURAÇÃO DO FIREBASE 
+// --------------------------------------------------------
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAawMA2HjEgBZ5gYIawMYECTp0oN4hj6YE",
+  authDomain: "temptracker-eb582.firebaseapp.com",
+  projectId: "temptracker-eb582",
+  storageBucket: "temptracker-eb582.firebasestorage.app",
+  messagingSenderId: "1079337208340",
+  appId: "1:1079337208340:web:0b86faa43e141f0ff1b501",
+};
+
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+
+// Handler de Mensagens em Segundo Plano (Background)
+messaging.onBackgroundMessage((payload) => {
+  console.log('[SW] Recebeu payload em background:', payload);
+
+  
+  // Se o seu backend envia { notification: ... }, COMENTE o bloco abaixo para evitar duplicidade.
+  // Se o seu backend envia apenas { data: ... }, mantenha o bloco abaixo.
+  /*
+  const notificationTitle = payload.notification?.title || payload.data?.titulo || "Novo Alarme!";
+  const notificationOptions = {
+    body: payload.notification?.body || payload.data?.mensagem || "Verifique o painel.",
+    icon: './img/icon-192.png',
+    data: payload.data || {}
+  };
+*/
+  return self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+
+// --------------------------------------------------------
+// 2. LÓGICA DE CACHE (PWA)
+// --------------------------------------------------------
 const CACHE_NAME = 'temptracker-v1';
 const urlsToCache = [
   './',
@@ -16,23 +57,15 @@ const urlsToCache = [
   '../js/pages/dashboard.js'
 ];
 
-// Instalação do Service Worker
 self.addEventListener('install', event => {
   console.log('[SW] Instalando...');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[SW] Cache aberto');
-        return cache.addAll(urlsToCache);
-      })
-      .then(() => {
-        console.log('[SW] Todos os recursos cacheados');
-        return self.skipWaiting();
-      })
+      .then(cache => cache.addAll(urlsToCache))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Ativação do Service Worker
 self.addEventListener('activate', event => {
   console.log('[SW] Ativando...');
   event.waitUntil(
@@ -40,52 +73,50 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Removendo cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => {
-      console.log('[SW] Ativação completa');
-      return self.clients.claim();
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
-// Intercepta requisições
 self.addEventListener('fetch', event => {
-  // Ignora requisições do Firebase
+  // Ignora requisições do Firebase/Google e API externa
   if (event.request.url.includes('firebase') || 
-      event.request.url.includes('gstatic')) {
+      event.request.url.includes('gstatic') ||
+      event.request.url.includes('googleapis')) {
     return;
   }
   
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Retorna do cache se encontrado
-        if (response) {
-          return response;
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
+    })
+  );
+});
+
+// --------------------------------------------------------
+// 3. HANDLER DE CLIQUE NA NOTIFICAÇÃO
+// --------------------------------------------------------
+self.addEventListener('notificationclick', function(event) {
+  console.log('[SW] Notificação clicada.');
+  event.notification.close();
+  const baseUrl = self.registration.scope; // Geralmente a pasta onde está o SW
+
+  event.waitUntil(
+    clients.matchAll({type: 'window', includeUncontrolled: true}).then( windowClients => {
+      // Tenta focar numa aba já aberta
+      for (var i = 0; i < windowClients.length; i++) {
+        var client = windowClients[i];
+        if (client.url.startsWith(baseUrl) && 'focus' in client) {
+          return client.focus();
         }
-        
-        // Se não estiver no cache, busca na rede
-        return fetch(event.request)
-          .then(response => {
-            // Não cacheamos se a resposta não for válida
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-            
-            // Clona a resposta para cachear
-            const responseToCache = response.clone();
-            
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-            
-            return response;
-          });
-      })
+      }
+      // Se não, abre nova janela
+      if (clients.openWindow) {
+        return clients.openWindow(baseUrl);
+      }
+    })
   );
 });

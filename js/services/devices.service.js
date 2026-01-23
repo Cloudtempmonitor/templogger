@@ -1,8 +1,6 @@
 // js/services/devices.service.js
 
 import { db } from './firebase.js'; 
-import { getUser } from "../core/state.js"; 
-
 
 import { 
     collection, 

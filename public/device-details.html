@@ -146,20 +146,14 @@
     <script type="module" src="../js/ui/menu.js"></script>
     <script type="module" src="../js/pages/device-details.js"></script>
 
-    <script>
+   <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      // Registra o service worker principal
+      // Registra APENAS o service worker unificado
       navigator.serviceWorker
         .register("./service-worker.js")
         .then((reg) => {
-          console.log("Service Worker principal registrado:", reg.scope);
-          
-          // DEPOIS registra o Firebase Messaging SW
-          return navigator.serviceWorker.register("./firebase-messaging-sw.js");
-        })
-        .then((reg) => {
-          console.log("Firebase Messaging SW registrado:", reg.scope);
+          console.log("Service Worker unificado registrado:", reg.scope);
         })
         .catch((err) => console.error("Falha ao registrar SW:", err));
     });
