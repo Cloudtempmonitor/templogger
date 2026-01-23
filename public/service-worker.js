@@ -25,14 +25,14 @@ messaging.onBackgroundMessage((payload) => {
   
   // Se o seu backend envia { notification: ... }, COMENTE o bloco abaixo para evitar duplicidade.
   // Se o seu backend envia apenas { data: ... }, mantenha o bloco abaixo.
-  /*
+  
   const notificationTitle = payload.notification?.title || payload.data?.titulo || "Novo Alarme!";
   const notificationOptions = {
     body: payload.notification?.body || payload.data?.mensagem || "Verifique o painel.",
     icon: './img/icon-192.png',
     data: payload.data || {}
   };
-*/
+
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
