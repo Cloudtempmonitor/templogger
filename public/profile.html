@@ -161,13 +161,23 @@
   <script type="module" src="../js/pages/profile.js"></script>
 
   <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./service-worker.js')
-                .then(reg => console.log('SW registrado com sucesso:', reg.scope))
-                .catch(err => console.error('Falha ao registrar SW:', err));
-        });
-    }
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      // Registra o service worker principal
+      navigator.serviceWorker
+        .register("./service-worker.js")
+        .then((reg) => {
+          console.log("Service Worker principal registrado:", reg.scope);
+          
+          // DEPOIS registra o Firebase Messaging SW
+          return navigator.serviceWorker.register("./firebase-messaging-sw.js");
+        })
+        .then((reg) => {
+          console.log("Firebase Messaging SW registrado:", reg.scope);
+        })
+        .catch((err) => console.error("Falha ao registrar SW:", err));
+    });
+  }
 </script>
 
 
