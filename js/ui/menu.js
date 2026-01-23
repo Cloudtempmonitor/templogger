@@ -15,7 +15,7 @@ async function loadMenu() {
   if (!container) return;
 
   try {
-    const response = await fetch("../components/menu.html");
+    const response = await fetch("./components/menu.html");
     if (!response.ok) throw new Error("Menu HTML não encontrado");
 
     const html = await response.text();

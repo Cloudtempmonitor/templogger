@@ -20,7 +20,7 @@ export async function requestNotificationPermission(userId) {
             // --- CORREÇÃO 1: Usar o SW principal já existente ---
             // Não registramos mais o 'firebase-messaging-sw.js'
             // Buscamos o registro do service-worker.js que o index.html já carregou
-            const registration = await navigator.serviceWorker.getRegistration('./service-worker.js');
+            const registration = await navigator.serviceWorker.getRegistration('../service-worker.js');
 
             if (!registration) {
                 console.error("❌ Service Worker principal não encontrado. Recarregue a página.");
