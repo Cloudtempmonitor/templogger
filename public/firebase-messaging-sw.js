@@ -12,54 +12,49 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const messaging = firebase.messaging();
 
-// Handler de mensagens em Segundo Plano
+// 1. HANDLER DE MENSAGENS EM SEGUNDO PLANO
 messaging.onBackgroundMessage((payload) => {
-  console.log('[Service Worker] Recebeu payload:', payload);
+  console.log('[SW] Recebeu payload:', payload);
 
-  // 1. Tenta pegar Título e Corpo de vários lugares possíveis (para não dar erro)
-  const notificationTitle = 
-      payload.notification?.title || 
-      payload.data?.titulo || 
-      "Novo Alarme!";
-
+  // Define Título e Texto (Prioriza o Console do Firebase, depois tenta Data)
+  const notificationTitle = payload.notification?.title || payload.data?.titulo || "Novo Alarme!";
   const notificationOptions = {
-    body: 
-      payload.notification?.body || 
-      payload.data?.mensagem || 
-      "Verifique o painel para detalhes.",
-      
-    // 2. IMPORTANTE: Ícone absoluto ou URL externa para evitar erro 404
-    // Se não tiver certeza que o arquivo existe, comente a linha abaixo.
-    icon: './img/favicon.png', 
+    body: payload.notification?.body || payload.data?.mensagem || "Verifique o painel.",
     
-    // Mantém os dados extras para quando clicar
-    data: payload.data
+    icon: './img/icon-192.png', 
+    
+    // Mantém os dados para o clique
+    data: payload.data || {} 
   };
 
-  // 3. Exibe a notificação explicitamente
+  // FORÇA a exibição da notificação
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Listener de clique na notificação (Para abrir o app ao clicar)
+// 2. HANDLER DE CLIQUE (Redirecionamento Inteligente)
 self.addEventListener('notificationclick', function(event) {
-  console.log('[Service Worker] Notificação clicada.');
+  console.log('[SW] Notificação clicada.');
   event.notification.close();
 
+  // URL Base onde o SW está instalado (ex: .../templogger/)
+  // Isso resolve o problema do erro 404 no GitHub Pages automaticamente
+  const baseUrl = self.registration.scope;
+
   event.waitUntil(
-    clients.matchAll({type: 'window'}).then( windowClients => {
-      // Tenta focar numa aba já aberta
+    clients.matchAll({type: 'window', includeUncontrolled: true}).then( windowClients => {
+      // Procura se o app já está aberto
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
-        if (client.url.indexOf('/') !== -1 && 'focus' in client) {
+        // Se encontrar uma aba que comece com a mesma URL base, foca nela
+        if (client.url.startsWith(baseUrl) && 'focus' in client) {
           return client.focus();
         }
       }
-      // Se não, abre a página principal
+      // Se não tiver aberto, abre a URL base (Home do PWA)
       if (clients.openWindow) {
-        return clients.openWindow('./index.html'); // Ajuste o caminho se necessário
+        return clients.openWindow(baseUrl);
       }
     })
   );
