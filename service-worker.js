@@ -92,7 +92,7 @@ self.addEventListener('fetch', event => {
 // --- 3. CLIQUE NA NOTIFICAÇÃO ---
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-const targetUrl = self.registration.scope + './index.html';
+const targetUrl = self.registration.scope + '/index.html';
   event.waitUntil(
     clients.matchAll({type: 'window', includeUncontrolled: true}).then(windowClients => {
       for (let client of windowClients) {
