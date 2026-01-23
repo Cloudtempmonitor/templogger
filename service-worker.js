@@ -88,7 +88,6 @@ self.addEventListener('fetch', event => {
   );
 });
 
-
 // --- 3. CLIQUE NA NOTIFICAÇÃO ---
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
@@ -98,14 +97,30 @@ self.addEventListener('notificationclick', function(event) {
   event.waitUntil(
     clients.matchAll({type: 'window', includeUncontrolled: true}).then(windowClients => {
       
+      let clientFound = false;
+      
       for (let client of windowClients) {
-        if (client.url.includes('cloudtempmonitor.github.io') && 'focus' in client) {
-          return client.focus().then((focusedClient) => {
-            return focusedClient.navigate(targetUrl); 
-          });
+        if (client.url.includes('cloudtempmonitor.github.io')) {
+          clientFound = true;
+          
+          // Tenta focar primeiro
+          if ('focus' in client) {
+            client.focus();
+          }
+          
+          // Verifica se podemos usar postMessage para comunicar com a página
+          if (client.postMessage && client.url !== targetUrl) {
+            // Envia uma mensagem para a página navegar internamente
+            // A página precisa ter um listener para 'message' que execute window.location.href
+            client.postMessage({type: 'NAVIGATE', url: targetUrl});
+          }
+          
+          break;
         }
       }
-      if (clients.openWindow) {
+      
+      // Se não encontrou nenhuma janela aberta, abre uma nova
+      if (!clientFound && clients.openWindow) {
         return clients.openWindow(targetUrl);
       }
     })
