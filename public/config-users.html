@@ -61,19 +61,6 @@
     <script type="module" src="../js/ui/menu.js"></script>
     <script type="module" src="../js/pages/config-users.js"></script>
 
-  <script>
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      // Registra APENAS o service worker unificado
-      navigator.serviceWorker
-        .register("./service-worker.js")
-        .then((reg) => {
-          console.log("Service Worker unificado registrado:", reg.scope);
-        })
-        .catch((err) => console.error("Falha ao registrar SW:", err));
-    });
-  }
-</script>
 
 </body>
 </html>
