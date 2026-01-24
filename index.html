@@ -85,20 +85,25 @@
     <script type="module" src="./js/ui/menu.js"></script>
     <script type="module" src="./js/pages/dashboard.js"></script>
 
-  
-   <script>
-  if ("serviceWorker" in navigator) {
+  <script>
+if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker
-        .register("./service-worker.js") 
-        .then((reg) => {
-          console.log("✅ SW Principal registrado com sucesso:", reg.scope);
-        })
-        .catch((err) => console.error("❌ Falha ao registrar SW:", err));
+        navigator.serviceWorker.register("/templogger/service-worker.js")
+            .then((reg) => {
+                console.log("✅ SW Principal registrado com sucesso:", reg.scope);
+                reg.pushManager.getSubscription().then(sub => {
+                    if (sub) {
+                        console.log("📱 Já inscrito para push:", sub.endpoint);
+                    }
+                });
+            })
+            .catch((err) => console.error("❌ Falha ao registrar SW:", err));
     });
-  }
+}
 </script>
     
+
+
 
   </body>
 </html>

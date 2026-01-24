@@ -1,0 +1,74 @@
+├── index.html
+├── login.html
+├── device-details.html
+├── config-users.html
+├── config-hierarchy.html
+├── config-devices.html
+├── profile.html
+├── manifest.js
+├── service-worker.js
+└── img
+      └──favicon.png
+      ├── icon-192.png
+      └── icon-512.png
+
+/assets
+   └── logo.png
+   
+
+
+/components
+  ├── menu.html
+  ├── header.html
+  └── loader.html
+
+
+/css
+  ├── admin.css 
+  ├── base.css          
+  ├── buttons.css        
+  ├── components.css          
+  ├── config-devices.css  
+  ├── config-hierarchy.css 
+  ├── config-users.css 
+  ├── dashboard.css     
+  ├── device-details.css 
+  ├── layout.css 
+  ├── login.css        
+  ├── menu.css  
+  ├── notifications.css  
+  └── profile.css  
+
+
+/js
+  ├── core
+  │    ├── auth.js
+  │    ├── permissions.js
+  │    └── state.js           
+  │
+  ├── services
+  │    ├── firebase.js
+  │    ├── devices.service.js
+  │    ├── hierarchy.service.js
+  │    ├── profile.service.js
+  │    ├── users.service.js
+  │    └── push-notification.js
+  │
+  ├── ui
+  │    ├── menu.js
+  │    ├── search-bar.js
+  │    ├── notifications.js
+  │    └── charts.js   
+  │
+  ├── pages
+  │    ├── dashboard.js
+  │    ├── profile.js
+  │    ├── config-users.js
+  │    ├── config-hierarchy.js
+  │    ├── config-devices.js
+  │    ├── device-details.js
+  │    └── login.js
+  │
+  └── utils
+       ├── formatters.js
+       └── helpers.js

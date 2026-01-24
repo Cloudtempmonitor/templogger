@@ -5,18 +5,30 @@
   "scope": "/templogger/",
   "display": "standalone",
   "background_color": "#1e293b",
-  "theme_color": "#2c3e50",  
-  "orientation": "portrait",
+  "theme_color": "#2c3e50",
+  "orientation": "portrait-primary",  
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "./img/icon-192.png",
+      "src": "/templogger/img/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "./img/icon-512.png",
+      "src": "/templogger/img/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dash",
+      "description": "Ver status dos dispositivos",
+      "url": "/templogger/index.html"
     }
   ]
 }

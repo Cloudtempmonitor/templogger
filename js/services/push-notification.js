@@ -8,6 +8,7 @@ import { getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/f
 // Mantenha sua chave VAPID
 const VAPID_KEY = "BLNp-LcDo57ZWUR7BsbWZ6BuPjVRuuiMrexFQ8emJAx1tOGalPhej9yKm-ibFgx4w2l8HorT6nm-r8NAw--cW8o"; 
 
+
 export async function requestNotificationPermission(userId) {
     if (!userId) return;
 
@@ -59,15 +60,8 @@ export function listenToForegroundMessages() {
     
     onMessage(messaging, (payload) => {
         console.log('🚨 Mensagem recebida com o site aberto:', payload);
-        
-        // Prioriza o título da notificação (console) ou dados (futuro backend)
         const titulo = payload.notification?.title || payload.data?.titulo || "Novo Alarme!";
         const corpo = payload.notification?.body || payload.data?.mensagem || "Verifique os detalhes.";
-        
-        audio.play().catch(() => console.log("Som silenciado pelo navegador (interação necessária)"));
-
-        // 2. Mostrar Alerta Visual (Toast/Div)
-        // Isso garante que o usuário veja o aviso sem poluir a barra de notificações do Android/Windows
         if (typeof showNotification === 'function') {
             showNotification(`${titulo}: ${corpo}`, "warning");
         } else {
