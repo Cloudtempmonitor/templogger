@@ -68,9 +68,37 @@ async function sendNotification(tokens, title, body, data = {}) {
     }
 
     const message = {
-        notification: { title, body },
-        data,
+        // ❌ REMOVA O 'notification' - causa duplicação
+        // notification: { title, body },
+        
+        // ✅ Use apenas data - você controla a notificação via SW
+        data: {
+            titulo: title,
+            mensagem: body,
+            ...data, // Outros dados como type, mac, etc.
+            timestamp: Date.now().toString(),
+            icon: '/templogger/img/icon-192.png'
+        },
         tokens,
+        
+        // 🔧 Configurações opcionais para Android
+        android: {
+            priority: "high",
+            ttl: 3600 * 1000, // 1 hora
+        },
+        
+        // 🔧 Configurações opcionais para APNs (iOS)
+        apns: {
+            headers: {
+                "apns-priority": "10",
+            },
+            payload: {
+                aps: {
+                    sound: "default",
+                    badge: 1,
+                },
+            },
+        },
     };
 
     try {
