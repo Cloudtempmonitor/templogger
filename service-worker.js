@@ -15,48 +15,75 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
+// --- FUNÇÃO AUXILIAR PARA CAMINHOS ---
+function getAbsoluteIconPath() {
+    return self.location.origin + '/templogger/img/icon-192.png';
+}
+
 // --- HANDLER DE BACKGROUND ---
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  console.log('[SW] Received background message:', payload);
 
-  // ────────────────────────────────────────────────
-  // CASO 1: Mensagem do Firebase Console (tem .notification)
-  // ────────────────────────────────────────────────
-  // O SDK já exibiu a notificação automaticamente → NÃO crie outra
+  // CASO 1: Mensagem com .notification (Firebase Console)
   if (payload.notification) {
-    console.log('[SW] Ignorando → notificação automática do FCM já foi exibida');
-    return;
+    console.log('[SW] Notificação do Firebase Console detectada');
+    
+    // Mostra notificação personalizada mesmo tendo .notification
+    const notificationTitle = payload.notification.title || payload.data?.titulo || 'Alarme TempTracker';
+    const notificationOptions = {
+      body: payload.notification.body || payload.data?.mensagem || 'Verifique o painel agora.',
+      icon: getAbsoluteIconPath(),
+      badge: getAbsoluteIconPath(),
+      vibrate: [200, 100, 200],
+      tag: 'alarme',
+      data: payload.data || {},
+      actions: [
+        {
+          action: 'view',
+          title: 'Ver Detalhes'
+        }
+      ]
+    };
+    
+    return self.registration.showNotification(notificationTitle, notificationOptions);
   }
 
-  // ────────────────────────────────────────────────
-  // CASO 2: Mensagem só com data 
-  // ────────────────────────────────────────────────
+  // CASO 2: Mensagem só com data (backend customizado)
   const notificationTitle = payload.data?.titulo || payload.data?.title || 'Alarme TempTracker';
   const notificationOptions = {
     body: payload.data?.mensagem || payload.data?.body || 'Verifique o painel agora.',
-    icon: './img/icon-192.png',           
+    icon: getAbsoluteIconPath(),
+    badge: getAbsoluteIconPath(),
+    vibrate: [200, 100, 200],
+    tag: 'alarme',
     data: payload.data || {},
+    actions: [
+      {
+        action: 'view',
+        title: 'Ver Detalhes'
+      }
+    ]
   };
 
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-
-// --- 2. CACHE PWA (OFFLINE) ---
+// --- CACHE PWA (OFFLINE) ---
 const CACHE_NAME = 'temptracker-v1';
 const urlsToCache = [
-  './',
-  './index.html',
-  './login.html',
-  './manifest.json',
-  './img/favicon.png',
-  './img/icon-192.png',
-  './css/base.css',
-  './css/menu.css',
-  './css/dashboard.css',
-  './js/core/auth.js',
-  './js/ui/menu.js',
-  './js/pages/dashboard.js'
+  '/templogger/',
+  '/templogger/index.html',
+  '/templogger/login.html',
+  '/templogger/manifest.json',
+  '/templogger/img/favicon.png',
+  '/templogger/img/icon-192.png',
+  '/templogger/img/icon-512.png',
+  '/templogger/css/base.css',
+  '/templogger/css/menu.css',
+  '/templogger/css/dashboard.css',
+  '/templogger/js/core/auth.js',
+  '/templogger/js/ui/menu.js',
+  '/templogger/js/pages/dashboard.js'
 ];
 
 self.addEventListener('install', event => {
@@ -88,23 +115,59 @@ self.addEventListener('fetch', event => {
   );
 });
 
-
-
+// --- HANDLER DE CLICK NA NOTIFICAÇÃO ---
 self.addEventListener('notificationclick', event => {
+  console.log('[SW] Notificação clicada:', event.notification);
+  
   event.notification.close();
-
-  const urlToOpen = new URL('/templogger/index.html', self.location.origin).href;
-
+  
+  // URL absoluta do seu app
+  const appUrl = self.location.origin + '/templogger/index.html';
+  
+  // Verifica se clicou em alguma ação
+  const action = event.action;
+  if (action === 'dismiss') {
+    console.log('[SW] Usuário escolheu ignorar');
+    return;
+  }
+  
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(windowClients => {
-        for (const client of windowClients) {
-          if (client.url.startsWith(self.location.origin)) {
-            return client.navigate(urlToOpen).then(() => client.focus());
-          }
+    clients.matchAll({ 
+      type: 'window',
+      includeUncontrolled: true 
+    }).then(windowClients => {
+      console.log(`[SW] Janelas encontradas: ${windowClients.length}`);
+      
+      // Log para debug
+      windowClients.forEach(client => {
+        console.log(`[SW] Janela: ${client.url}`);
+      });
+      
+      // Procura uma janela do seu app
+      for (const client of windowClients) {
+        // Verifica se a URL contém o caminho do seu app
+        if (client.url.includes('/templogger/')) {
+          console.log('[SW] Janela do app encontrada, focando...');
+          return client.focus().then(() => {
+            // Envia mensagem para a página
+            if (client.postMessage) {
+              client.postMessage({
+                type: 'NOTIFICATION_CLICKED',
+                data: event.notification.data || {}
+              });
+            }
+          });
         }
-
-        return clients.openWindow(urlToOpen);
-      })
+      }
+      
+      // Se não encontrou, abre nova janela
+      console.log('[SW] Nenhuma janela encontrada, abrindo nova...');
+      return clients.openWindow(appUrl);
+    })
   );
+});
+
+// --- HANDLER DE AÇÕES DA NOTIFICAÇÃO ---
+self.addEventListener('notificationclose', event => {
+  console.log('[SW] Notificação fechada:', event.notification);
 });
