@@ -1,261 +1,458 @@
 /**
- * index.js - Cloud Functions 
+ * index.js - Cloud Functions
  */
 
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { onDocumentWritten, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const {
+  onDocumentWritten,
+  onDocumentUpdated,
+} = require("firebase-functions/v2/firestore");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
+const nodemailer = require("nodemailer");
+const { defineJsonSecret } = require("firebase-functions/params");
 
 admin.initializeApp();
 const db = admin.firestore();
 
 const OFFLINE_THRESHOLD_SECONDS = 120;
 
+const emailConfig = defineJsonSecret("EMAIL_CONFIG");
+
+let mailTransport = null;
+
 // ==================================================================
-// 1. HELPER: Buscar Tokens (CORRIGIDO PARA 'usuarios')
+// HELPER: Inicializador do Transporter 
 // ==================================================================
-async function getEligibleTokens(macAddress) {
-    // LOG DE DEBUG PARA CONFIRMAR O MAC
-    logger.info(`🔍 BUSCA: Procurando na coleção 'usuarios' pelo MAC: '${macAddress}'`);
-    
-    const tokens = [];
-    
-    try {
-        // --- AQUI ESTAVA O ERRO (users -> usuarios) ---
-        const usersSnapshot = await db.collection('usuarios') 
-            .where('ativo', '==', true)
-            .where('alarmesAtivos', '==', true)
-            .where('acessoDispositivos', 'array-contains', macAddress)
-            .get();
+function getTransporter() {
+  if (mailTransport) return mailTransport;
 
-        logger.info(`📊 RESULTADO: Encontrados ${usersSnapshot.size} usuário(s).`);
-
-        if (usersSnapshot.empty) {
-            // Se ainda der zero, vamos listar IDs aleatórios para ver se estamos no banco certo
-            logger.warn("❌ ALERTA: Nenhum usuário encontrado. Verifique se a coleção se chama realmente 'usuarios'.");
-        }
-
-        usersSnapshot.forEach(doc => {
-            const userData = doc.data();
-            logger.info(`👤 USUÁRIO ENCONTRADO: ${doc.id} | Tokens: ${userData.fcmTokens?.length || 0}`);
-            
-            if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
-                userData.fcmTokens.forEach(token => {
-                    if (token) tokens.push(token);
-                });
-            }
-        });
-
-        // Remove duplicatas
-        const uniqueTokens = [...new Set(tokens)];
-        logger.info(`🎯 TOKENS FINAIS: ${uniqueTokens.length} para envio.`);
-        return uniqueTokens;
-
-    } catch (error) {
-        logger.error("❌ ERRO CRÍTICO NA BUSCA:", error);
-        return [];
-    }
+  mailTransport = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: emailConfig.value().user || "cloudtempmonitor@gmail.com",
+      pass: emailConfig.value().pass,
+    },
+  });
+  return mailTransport;
 }
 
 // ==================================================================
-// 2. HELPER: Enviar Notificação
+// 1. HELPER: Buscar Tokens
 // ==================================================================
-async function sendNotification(tokens, title, body, data = {}) {
-    if (tokens.length === 0) {
-        logger.warn("⚠️ ENVIO ABORTADO: Lista de tokens vazia.");
-        return;
+async function getEligibleTokens(macAddress) {
+  logger.info(
+    `🔍 BUSCA: Procurando na coleção 'usuarios' pelo MAC: '${macAddress}'`,
+  );
+
+  const tokens = [];
+
+  try {
+    const usersSnapshot = await db
+      .collection("usuarios")
+      .where("ativo", "==", true)
+      .where("alarmesAtivos", "==", true)
+      .where("acessoDispositivos", "array-contains", macAddress)
+      .get();
+
+    if (usersSnapshot.empty) {
+      logger.warn(" ALERTA: Nenhum usuário encontrado.");
     }
 
-    const message = {
-        // ❌ REMOVA O 'notification' - causa duplicação
-        // notification: { title, body },
-        
-        // ✅ Use apenas data - você controla a notificação via SW
-        data: {
-            titulo: title,
-            mensagem: body,
-            ...data, // Outros dados como type, mac, etc.
-            timestamp: Date.now().toString(),
-            icon: '/templogger/img/icon-192.png'
-        },
-        tokens,
-        
-        // 🔧 Configurações opcionais para Android
-        android: {
-            priority: "high",
-            ttl: 3600 * 1000, // 1 hora
-        },
-        
-        // 🔧 Configurações opcionais para APNs (iOS)
-        apns: {
-            headers: {
-                "apns-priority": "10",
-            },
-            payload: {
-                aps: {
-                    sound: "default",
-                    badge: 1,
-                },
-            },
-        },
+    usersSnapshot.forEach((doc) => {
+      const userData = doc.data();
+      if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
+        userData.fcmTokens.forEach((token) => {
+          if (token) tokens.push(token);
+        });
+      }
+    });
+
+    const uniqueTokens = [...new Set(tokens)];
+    return uniqueTokens;
+  } catch (error) {
+    logger.error("❌ ERRO CRÍTICO NA BUSCA:", error);
+    return [];
+  }
+}
+
+// ==================================================================
+// 1B. HELPER: Buscar E-mails Elegíveis
+// ==================================================================
+async function getEligibleEmails(macAddress) {
+  logger.info(
+    `🔍 BUSCA E-MAILS: Procurando na coleção 'usuarios' pelo MAC: '${macAddress}'`,
+  );
+
+  const emails = [];
+
+  try {
+    const usersSnapshot = await db
+      .collection("usuarios")
+      .where("ativo", "==", true)
+      .where("alarmesAtivos", "==", true)
+      .where("acessoDispositivos", "array-contains", macAddress)
+      .get();
+
+    usersSnapshot.forEach((doc) => {
+      const userData = doc.data();
+      if (userData.email) {
+        emails.push(userData.email);
+      }
+    });
+
+    const uniqueEmails = [...new Set(emails)];
+    logger.info(`📧 E-MAILS FINAIS: ${uniqueEmails.length} para envio.`);
+    return uniqueEmails;
+  } catch (error) {
+    logger.error("❌ ERRO CRÍTICO NA BUSCA DE E-MAILS:", error);
+    return [];
+  }
+}
+
+// ==================================================================
+// 2. HELPER: Enviar Notificação FCM
+// ==================================================================
+async function sendNotification(tokens, title, body, data = {}) {
+  if (tokens.length === 0) return;
+
+  const message = {
+    data: {
+      titulo: title,
+      mensagem: body,
+      ...data,
+      timestamp: Date.now().toString(),
+      icon: "/templogger/img/icon-192.png",
+    },
+    tokens,
+    android: { priority: "high", ttl: 3600 * 1000 },
+    apns: {
+      headers: { "apns-priority": "10" },
+      payload: { aps: { sound: "default", badge: 1 } },
+    },
+  };
+
+  try {
+    const response = await admin.messaging().sendEachForMulticast(message);
+    logger.info(`✅ FCM Enviado: ${response.successCount} sucessos.`);
+  } catch (error) {
+    logger.error("❌ ERRO NO FCM:", error);
+  }
+}
+
+// ==================================================================
+// 2B. HELPER: Enviar E-mails 
+// ==================================================================
+async function sendEmails(emails, subject, textBody, htmlBody) {
+  if (emails.length === 0) {
+    logger.warn("⚠️ ENVIO DE E-MAIL ABORTADO: Lista vazia.");
+    return;
+  }
+
+  const transport = getTransporter();
+
+  const promessasEnvio = emails.map(async (email) => {
+    const mailOptions = {
+      from: `Cloud Monitor <${emailConfig.value().user || "noreply@monitor.com"}>`, // Uso seguro do .value() aqui
+      to: email,
+      subject: subject,
+      text: textBody,
+      html: htmlBody,
     };
 
     try {
-        logger.info(`🚀 ENVIANDO FCM para ${tokens.length} dispositivos...`);
-        const response = await admin.messaging().sendEachForMulticast(message);
-        logger.info(`✅ SUCESSO FCM: ${response.successCount} enviados, ${response.failureCount} falhas.`);
-        
-        if (response.failureCount > 0) {
-             response.responses.forEach((r, i) => {
-                 if (!r.success) logger.error(`❌ Falha Token ${i}:`, r.error);
-             });
-        }
+      await transport.sendMail(mailOptions);
+      logger.info(`✅ E-mail enviado para ${email}`);
     } catch (error) {
-        logger.error("❌ ERRO NO FCM:", error);
+      logger.error(`❌ Erro ao enviar e-mail para ${email}:`, error);
     }
+  });
+
+  await Promise.all(promessasEnvio);
 }
 
 // ==================================================================
-// 3. GATILHO: Dispositivo OFFLINE (Agendado)
+// 5. GATILHO: Alarmes
 // ==================================================================
-exports.checkDeviceOffline = onSchedule("every 1 minutes", async (event) => {
-    const now = Date.now();
-    const cutoffTime = new Date(now - (OFFLINE_THRESHOLD_SECONDS * 1000));
-    const firestoreTimestamp = admin.firestore.Timestamp.fromDate(cutoffTime);
-
-    // Nota: Se a coleção de dispositivos se chamar diferente, mude aqui também!
-    // Assumindo 'dispositivos' conforme seus logs anteriores.
-    const snapshot = await db.collection('dispositivos')
-        .where('statusTimestamp', '<', firestoreTimestamp)
-        .where('isOffline', '==', false)
-        .get();
-
-    if (snapshot.empty) return;
-
-    const batch = db.batch();
-    const notificationsPromises = [];
-
-    snapshot.docs.forEach(doc => {
-        const deviceData = doc.data();
-        const mac = doc.id;
-        const nome = deviceData.nomeDispositivo || "Dispositivo";
-
-        batch.update(doc.ref, { isOffline: true });
-
-        const p = getEligibleTokens(mac).then(tokens => {
-            return sendNotification(
-                tokens,
-                "⚠️ Dispositivo Offline",
-                `${nome} parou de responder.`,
-                { mac: mac, type: 'offline' }
-            );
-        });
-        notificationsPromises.push(p);
-    });
-
-    await batch.commit();
-    await Promise.all(notificationsPromises);
-    logger.info(`Offline processado: ${snapshot.size} dispositivos.`);
-});
-
-// ==================================================================
-// 4. GATILHO: Dispositivo ONLINE
-// ==================================================================
-exports.onDeviceUpdate = onDocumentUpdated("dispositivos/{mac}", async (event) => {
+exports.onAlarmChange = onDocumentWritten(
+  {
+    document: "dispositivos/{mac}/eventos/estadoAlarmeAtual",
+    secrets: [emailConfig], 
+  },
+  async (event) => {
     const mac = event.params.mac;
-    const beforeData = event.data.before.data();
-    const afterData = event.data.after.data();
 
-    if (beforeData.isOffline === true && afterData.statusTimestamp > beforeData.statusTimestamp) {
-        await event.data.after.ref.update({ isOffline: false });
-        const nome = afterData.nomeDispositivo || "Dispositivo";
-        const tokens = await getEligibleTokens(mac);
-
-        await sendNotification(
-            tokens,
-            "✅ Dispositivo Online",
-            `${nome} voltou a operar.`,
-            { mac: mac, type: 'online' }
-        );
-    }
-});
-
-// ==================================================================
-// 5. GATILHO: Alarmes (CORREÇÃO DE ANINHAMENTO + COLEÇÃO USUARIOS)
-// ==================================================================
-exports.onAlarmChange = onDocumentWritten("dispositivos/{mac}/eventos/estadoAlarmeAtual", async (event) => {
-    const mac = event.params.mac;
-    
-    // 1. Pegamos os dados crus do documento
     const rawBefore = event.data.before.exists ? event.data.before.data() : {};
     const rawAfter = event.data.after.exists ? event.data.after.data() : {};
 
-    // 2. CORREÇÃO CRÍTICA: Desembrulhar o objeto "estadoAlarmeAtual" se ele existir
-    // O frontend lê: snap.data().estadoAlarmeAtual.ativo
     const beforeData = rawBefore.estadoAlarmeAtual || rawBefore;
     const afterData = rawAfter.estadoAlarmeAtual || rawAfter;
 
-    // 3. Agora lemos os booleanos do lugar certo
     const wasActive = beforeData.ativo === true;
     const isActive = afterData.ativo === true;
 
-    logger.info(`🔔 GATILHO: MAC=${mac}`);
-    logger.info(`   📦 Estrutura After: ${JSON.stringify(afterData)}`);
-    logger.info(`   🎚️ Estado: De '${wasActive}' Para '${isActive}'`);
+    logger.info(`🔔 GATILHO: MAC=${mac} | Estado: ${wasActive} -> ${isActive}`);
+
+    if (wasActive === isActive) return;
+
+    const deviceSnap = await db.collection("dispositivos").doc(mac).get();
+    if (!deviceSnap.exists) {
+      logger.error("❌ Dispositivo não encontrado.");
+      return;
+    }
+
+    const devData = deviceSnap.data();
+    const nomeDisp = devData.nomeDispositivo || "Dispositivo";
+    const nomeInst = devData.nomeInstituicao || "Instituição";
+    const nomeSetor = devData.nomeSetor || "Setor";
 
     // INÍCIO DE ALARME
     if (!wasActive && isActive) {
-        logger.info("✅ ALARME INICIADO (Lógica Corrigida).");
-        
-        const deviceSnap = await db.collection('dispositivos').doc(mac).get();
-        if (!deviceSnap.exists) {
-            logger.error("❌ Dispositivo não encontrado.");
-            return;
+      const tipoAlarme = afterData.tipo || "Alarme Genérico";
+      const idEvento = afterData.idEvento || "";
+
+      const [tokens, emails] = await Promise.all([
+        getEligibleTokens(mac),
+        getEligibleEmails(mac),
+      ]);
+
+      await sendNotification(
+        tokens,
+        `🚨 Alerta: ${nomeDisp}`,
+        `${nomeInst} - ${nomeSetor}\nMotivo: ${tipoAlarme}`,
+        { mac, type: "alarm_start", alarmType: tipoAlarme, eventId: idEvento },
+      );
+      let leiturasParaEmail = {
+        sonda: "--",
+        ambiente: "--",
+        umidade: "--",
+        statusSonda: "Normal",
+      };
+      if (idEvento) {
+        const eventSnap = await db
+          .collection(`dispositivos/${mac}/eventos`)
+          .doc(idEvento)
+          .get();
+        if (eventSnap.exists) {
+          const ev = eventSnap.data();
+          const readings = ev.startReading || {};
+
+          leiturasParaEmail = {
+            sonda: readings.temperatura,
+            ambiente: readings.temperaturaAmbiente,
+            umidade: readings.umidade,
+            statusSonda: readings.alarmeSonda ? "CRÍTICO" : "Normal",
+          };
         }
+      }
 
-        const devData = deviceSnap.data();
-        const nomeDisp = devData.nomeDispositivo || "Dispositivo";
-        const nomeInst = devData.nomeInstituicao || "Instituição";
-        const nomeSetor = devData.nomeSetor || "Setor";
-        
-        // Pega o tipo de dentro do objeto desembrulhado
-        const tipoAlarme = afterData.tipo || "Alarme Genérico"; 
-        const idEvento = afterData.idEvento || "";
+      const dadosEmail = {
+        instituicao: nomeInst,
+        setor: nomeSetor,
+        dispositivo: nomeDisp,
+        motivo: tipoAlarme,
+        leituras: leiturasParaEmail,
+      };
 
-        // Chama a função que busca na coleção 'usuarios' (já corrigida)
-        const tokens = await getEligibleTokens(mac);
+      const htmlBody = generateEmailHtml("ALARM_START", dadosEmail);
 
-        await sendNotification(
-            tokens,
-            `🚨 Alerta: ${nomeDisp}`,
-            `${nomeInst} - ${nomeSetor}\nMotivo: ${tipoAlarme}`,
-            { mac, type: 'alarm_start', alarmType: tipoAlarme, eventId: idEvento }
-        );
+      const textBody = `ALERTA: ${nomeDisp} no setor ${nomeSetor}. Motivo: ${tipoAlarme}. Sonda: ${leiturasParaEmail.sonda}°C`;
+
+      await sendEmails(
+        emails,
+        `[ALERTA] ${nomeDisp} - ${nomeSetor}`,
+        textBody,
+        htmlBody,
+      );
     }
-    
-    // FIM DE ALARME
+
+    // FIM DE ALARME (Normalização)
     else if (wasActive && !isActive) {
-        logger.info("✅ ALARME RESOLVIDO (Lógica Corrigida).");
-        
-        const deviceSnap = await db.collection('dispositivos').doc(mac).get();
-        if (!deviceSnap.exists) return;
+      const tipoAnterior = beforeData.tipo || "Alarme Desconhecido";
+      const idEvento = beforeData.idEvento || "";
 
-        const devData = deviceSnap.data();
-        const nomeDisp = devData.nomeDispositivo || "Dispositivo";
-        const nomeInst = devData.nomeInstituicao || "Instituição";
-        const nomeSetor = devData.nomeSetor || "Setor";
-        const tipoAnterior = beforeData.tipo || "Alarme";
+      const [tokens, emails] = await Promise.all([
+        getEligibleTokens(mac),
+        getEligibleEmails(mac),
+      ]);
 
-        const tokens = await getEligibleTokens(mac);
+      await sendNotification(
+        tokens,
+        `✅ Normalizado: ${nomeDisp}`,
+        `${nomeInst} - ${nomeSetor}\nO parâmetro ${tipoAnterior} retornou aos níveis aceitáveis.`,
+        { mac, type: "alarm_end", lastAlarmType: tipoAnterior },
+      );
 
-        await sendNotification(
-            tokens,
-            `✅ Normalizado: ${nomeDisp}`,
-            `${nomeInst} - ${nomeSetor}\nO parâmetro ${tipoAnterior} retornou aos níveis aceitáveis.`,
-            { mac, type: 'alarm_end', lastAlarmType: tipoAnterior }
-        );
-    } else {
-        logger.info("ℹ️ Sem mudança de estado (Ignorado).");
+      // --- PREPARAÇÃO DOS DADOS ---
+      let leiturasParaEmail = {
+        sonda: undefined,
+        ambiente: undefined,
+        umidade: undefined,
+      };
+      let duracaoTexto = "Não calculada";
+
+      if (idEvento) {
+        const eventSnap = await db
+          .collection(`dispositivos/${mac}/eventos`)
+          .doc(idEvento)
+          .get();
+        if (eventSnap.exists) {
+          const ev = eventSnap.data();
+
+          // Pega endReading
+          const readings = ev.endReading || {};
+          leiturasParaEmail = {
+            sonda: readings.temperatura,
+            ambiente: readings.temperaturaAmbiente,
+            umidade: readings.umidade,
+          };
+
+          // CÁLCULO DA DURAÇÃO 
+          if (ev.startTime) {
+            const inicio = ev.startTime.toDate();
+
+            const fim = ev.endTime ? ev.endTime.toDate() : new Date();
+
+            const diffMs = fim - inicio; 
+            const diffMins = Math.floor(diffMs / 60000); 
+
+            const horas = Math.floor(diffMins / 60);
+            const minutos = diffMins % 60;
+
+            if (horas > 0) {
+              duracaoTexto = `${horas}h ${minutos}min`;
+            } else {
+              duracaoTexto = `${minutos} minutos`;
+            }
+          }
+        }
+      }
+
+      const dadosEmail = {
+        instituicao: nomeInst,
+        setor: nomeSetor,
+        dispositivo: nomeDisp,
+        motivo: tipoAnterior,
+        duracao: duracaoTexto, 
+        leituras: leiturasParaEmail,
+      };
+
+      const htmlBody = generateEmailHtml("ALARM_END", dadosEmail);
+
+      const textBody = `NORMALIZADO: ${nomeDisp}. Duração: ${duracaoTexto}. Leitura atual: ${leiturasParaEmail.sonda || "?"}°C`;
+
+      await sendEmails(emails, `[NORMALIZADO] ${nomeDisp}`, textBody, htmlBody);
     }
-});
+  },
+);
+
+// ==================================================================
+// HELPER: Gerador de Template HTML
+// ==================================================================
+function generateEmailHtml(tipo, dados) {
+    const isAlarm = tipo === 'ALARM_START';
+    
+    const triggersArray = (dados.disparadoPor && Array.isArray(dados.disparadoPor)) ? dados.disparadoPor.join(' ') : '';
+    const motivoTexto = dados.motivo || '';
+    
+    const textoAnalise = (triggersArray + ' ' + motivoTexto).toLowerCase();
+    
+    let tituloBanner = isAlarm ? ' 🚨 ALERTA DO SISTEMA' : '✅ SISTEMA NORMALIZADO';
+    
+    if (isAlarm) {
+        if (textoAnalise.includes('umidade') || textoAnalise.includes('umi')) {
+            tituloBanner = '🚨 ALERTA DE UMIDADE';
+        } 
+        else if (textoAnalise.includes('temp') || textoAnalise.includes('sonda')) {
+            tituloBanner = '🚨 ALERTA DE TEMPERATURA';
+        }
+    }
+
+    const color = isAlarm ? '#d32f2f' : '#2e7d32'; 
+    const bgColor = isAlarm ? '#fdecea' : '#e8f5e9';
+    const msgPrincipal = isAlarm 
+        ? 'O sistema detectou um desvio crítico nos seguintes parâmetros:'
+        : 'O monitoramento indicou que os parâmetros voltaram à normalidade.';
+    const labelColunaValor = isAlarm ? 'Leitura de Disparo' : 'Leitura Final';
+
+    const dateOptions = { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+    const dataHora = new Date().toLocaleString('pt-BR', dateOptions);
+
+    let duracaoHtml = '';
+    if (!isAlarm && dados.duracao) {
+        duracaoHtml = `<p style="margin: 5px 0;"><strong>⏱️ Duração do Incidente:</strong> ${dados.duracao}</p>`;
+    }
+
+    let rows = '';
+    
+    if (dados.leituras.sonda !== undefined && dados.leituras.sonda !== null) {
+        rows += `
+        <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">🌡️ Sonda Principal</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${dados.leituras.sonda}°C</td>
+        </tr>`;
+    }
+
+    if (dados.leituras.ambiente !== undefined && dados.leituras.ambiente !== null) {
+        rows += `
+        <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">🏠 Ambiente</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${dados.leituras.ambiente}°C</td>
+        </tr>`;
+    }
+
+    if (dados.leituras.umidade !== undefined && dados.leituras.umidade !== null) {
+        rows += `
+        <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">💧 Umidade</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${dados.leituras.umidade}%</td>
+        </tr>`;
+    }
+
+    let tabelaHtml = '';
+    if (rows) {
+        tabelaHtml = `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;">
+                <tr style="background-color: #f5f5f5; text-align: left;">
+                    <th style="padding: 8px; border-bottom: 1px solid #ddd;">Parâmetro</th>
+                    <th style="padding: 8px; border-bottom: 1px solid #ddd;">${labelColunaValor}</th>
+                </tr>
+                ${rows}
+            </table>
+        `;
+    }
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; margin-top: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <tr>
+                <td align="center" style="padding: 25px 0; background-color: ${color}; color: #ffffff;">
+                    <h1 style="margin: 0; font-size: 24px; text-transform: uppercase;">${tituloBanner}</h1>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 30px;">
+                    <p style="font-size: 16px; color: #333;">${msgPrincipal}</p>
+                    
+                    <div style="background-color: ${bgColor}; border-left: 5px solid ${color}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                        <p style="margin: 5px 0;"><strong>🏢 Local:</strong> ${dados.instituicao} - ${dados.setor}</p>
+                        <p style="margin: 5px 0;"><strong>📟 Dispositivo:</strong> ${dados.dispositivo}</p>
+                        <p style="margin: 5px 0;"><strong>⚠️ Detalhe:</strong> ${dados.motivo}</p>
+                        ${duracaoHtml}
+                        <p style="margin: 5px 0;"><strong>🕒 Data/Hora:</strong> ${dataHora}</p>
+                    </div>
+
+                    ${tabelaHtml}
+
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="https://cloudtempmonitor.github.io/templogger/" style="background-color: ${color}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Acessar Painel</a>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    `;
+}
