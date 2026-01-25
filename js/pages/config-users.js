@@ -44,17 +44,16 @@ let userManagementFilter = null;
 // 2. INICIALIZAÇÃO (Substitui o initUsersModule)
 // ==========================================================================
 
-
 // Adicione isso se este f// Adicione isso se este for o script principal da página de hierarquia
 document.addEventListener("DOMContentLoaded", () => {
-    const user = getUser();
-    if (user) {
-        initPage();
-    } else {
-        window.addEventListener("userReady", () => {
-            initPage();
-        });
-    }
+  const user = getUser();
+  if (user) {
+    initPage();
+  } else {
+    window.addEventListener("userReady", () => {
+      initPage();
+    });
+  }
 });
 
 // Função de inicialização segura
@@ -70,7 +69,7 @@ async function initPage() {
         currentUser = getUser();
         showUsuariosView();
       },
-      { once: true }
+      { once: true },
     ); // Executa apenas uma vez
   } else {
     // Usuário já está na memória, carrega direto
@@ -125,9 +124,12 @@ async function determineActiveInstitution() {
     if (!userManagementFilter) {
       // AJUSTE AQUI: Tenta pegar a instituição ativa global primeiro
       const activeGlobal = getActiveInstitution();
-      
+
       // Se tiver uma ativa no header, usa ela. Senão, usa "Todas".
-      userManagementFilter = activeGlobal || { id: "all", nome: "Todas as instituições" };
+      userManagementFilter = activeGlobal || {
+        id: "all",
+        nome: "Todas as instituições",
+      };
     }
     return;
   }
@@ -183,13 +185,13 @@ export async function showUsuariosView() {
       allUsers = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       if (filterForDisplay?.id && filterForDisplay.id !== "all") {
         allUsers = allUsers.filter((u) =>
-          u.acessoInstituicoes?.includes(filterForDisplay.id)
+          u.acessoInstituicoes?.includes(filterForDisplay.id),
         );
       }
     } else {
       const q = query(
         collection(db, "usuarios"),
-        where("acessoInstituicoes", "array-contains", filterForDisplay.id)
+        where("acessoInstituicoes", "array-contains", filterForDisplay.id),
       );
       const snap = await getDocs(q);
       allUsers = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -222,7 +224,7 @@ export async function showUsuariosView() {
                         (inst) =>
                           `<option value="${inst.id}" ${
                             filterForDisplay?.id === inst.id ? "selected" : ""
-                          }>${inst.nome}</option>`
+                          }>${inst.nome}</option>`,
                       )
                       .join("")}
                 </select>
@@ -253,26 +255,25 @@ export async function showUsuariosView() {
     const btnAdd = document.getElementById("btn-add-user-top");
 
     if (topBar && searchWrapper && btnAdd) {
-        // Remove a busca de onde ela estiver primeiro
-        searchWrapper.remove();
-        
-        // Insere ESTRITAMENTE antes do botão (Filtro já está lá, então fica no meio)
-        topBar.insertBefore(searchWrapper, btnAdd);
+      // Remove a busca de onde ela estiver primeiro
+      searchWrapper.remove();
 
-        // Força limpeza de estilos inline que o mobile pode ter colocado
-        searchWrapper.style.display = 'flex';
-        
-        // Garante visibilidade dos filhos
-        const bottomBar = searchWrapper.querySelector('.bottom-dark-bar');
-        if (bottomBar) {
-            bottomBar.style.visibility = 'visible';
-            bottomBar.style.transform = 'none';
-            bottomBar.style.position = 'static';
-        }
+      // Insere ESTRITAMENTE antes do botão (Filtro já está lá, então fica no meio)
+      topBar.insertBefore(searchWrapper, btnAdd);
+
+      // Força limpeza de estilos inline que o mobile pode ter colocado
+      searchWrapper.style.display = "flex";
+
+      // Garante visibilidade dos filhos
+      const bottomBar = searchWrapper.querySelector(".bottom-dark-bar");
+      if (bottomBar) {
+        bottomBar.style.visibility = "visible";
+        bottomBar.style.transform = "none";
+        bottomBar.style.position = "static";
+      }
     }
   }
   setupSearchClear();
-
 }
 
 function setupSearchClear() {
@@ -384,108 +385,111 @@ function setupTableListeners() {
 }
 
 function setupViewEvents(allUsers, currentUser) {
-    
-    // =================================================================
-    // 1. BARRA DE BUSCA (IMPLEMENTAÇÃO CORRETA)
-    // =================================================================
-    // Esta função cria a barra HTML e configura o listener automaticamente
-    initSearchBar((searchTerm) => {
-        const term = searchTerm.toLowerCase().trim();
-        
-        // Filtra os usuários (Nome OU Email)
-        const filtered = allUsers.filter(u => 
-            (u.nome && u.nome.toLowerCase().includes(term)) || 
-            (u.email && u.email.toLowerCase().includes(term))
-        );
-        
-        // Atualiza a tabela
-        const wrapper = document.getElementById("users-list-wrapper");
-        if(wrapper) {
-            wrapper.innerHTML = renderUsersTable(filtered);
-        }
-    }, "Buscar por nome ou e-mail...");
+  // =================================================================
+  // 1. BARRA DE BUSCA (IMPLEMENTAÇÃO CORRETA)
+  // =================================================================
+  // Esta função cria a barra HTML e configura o listener automaticamente
+  initSearchBar((searchTerm) => {
+    const term = searchTerm.toLowerCase().trim();
 
+    // Filtra os usuários (Nome OU Email)
+    const filtered = allUsers.filter(
+      (u) =>
+        (u.nome && u.nome.toLowerCase().includes(term)) ||
+        (u.email && u.email.toLowerCase().includes(term)),
+    );
 
-    // =================================================================
-    // 2. FILTRO DE INSTITUIÇÃO
-    // =================================================================
-    const instFilter = document.getElementById("inst-filter");
-    if (instFilter) {
-        instFilter.addEventListener("change", async (e) => {
-            const val = e.target.value;
-            if (val === "all") {
-                userManagementFilter = { id: "all" };
-            } else {
-                const i = hierarchyCache.instituicoes.find((x) => x.id === val);
-                if (i) userManagementFilter = i;
-            }
-            await showUsuariosView();
-        });
-    }
-
-    // =================================================================
-    // 3. BOTÃO NOVO USUÁRIO
-    // =================================================================
-    const btnAdd = document.getElementById("btn-add-user-top");
-    if (btnAdd) btnAdd.addEventListener("click", () => openUserModal(null));
-
-    // =================================================================
-    // 4. DELEGAÇÃO DE EVENTOS (MENU E AÇÕES)
-    // =================================================================
+    // Atualiza a tabela
     const wrapper = document.getElementById("users-list-wrapper");
-    // Clone trick para limpar listeners antigos
-    const newWrapper = wrapper.cloneNode(true);
-    wrapper.parentNode.replaceChild(newWrapper, wrapper);
+    if (wrapper) {
+      wrapper.innerHTML = renderUsersTable(filtered);
+    }
+  }, "Buscar por nome ou e-mail...");
 
-    newWrapper.addEventListener("click", (e) => {
-        const target = e.target;
-
-        // A. Toggle Menu (3 pontinhos)
-        const toggleBtn = target.closest(".js-toggle-menu");
-        if (toggleBtn) {
-            e.stopPropagation();
-            const id = toggleBtn.dataset.id;
-            
-            // Fecha outros menus e limpa z-index
-            closeAllMenus();
-
-            // Abre o atual
-            const menu = document.getElementById(`menu-${id}`);
-            if (menu) {
-                // Se já estava aberto, apenas fecha (o closeAllMenus já fechou, então não faz nada)
-                // Se estava fechado, abrimos:
-                if (!menu.classList.contains("show")) { // Lógica ajustada
-                     menu.classList.add("show");
-                     const parentRow = toggleBtn.closest("tr");
-                     if (parentRow) parentRow.classList.add("z-active");
-                }
-            }
-            return;
-        }
-
-        // B. Editar
-        const editBtn = target.closest(".js-action-edit");
-        if (editBtn) {
-            openUserModal(editBtn.dataset.id);
-            closeAllMenus();
-            return;
-        }
-
+  // =================================================================
+  // 2. FILTRO DE INSTITUIÇÃO
+  // =================================================================
+  const instFilter = document.getElementById("inst-filter");
+  if (instFilter) {
+    instFilter.addEventListener("change", async (e) => {
+      const val = e.target.value;
+      if (val === "all") {
+        userManagementFilter = { id: "all" };
+      } else {
+        const i = hierarchyCache.instituicoes.find((x) => x.id === val);
+        if (i) userManagementFilter = i;
+      }
+      await showUsuariosView();
     });
+  }
 
-    // Função auxiliar para limpar menus e z-index
-    function closeAllMenus() {
-        document.querySelectorAll(".action-dropdown.show").forEach((el) => el.classList.remove("show"));
-        document.querySelectorAll("tr.user-row.z-active").forEach((el) => el.classList.remove("z-active"));
+  // =================================================================
+  // 3. BOTÃO NOVO USUÁRIO
+  // =================================================================
+  const btnAdd = document.getElementById("btn-add-user-top");
+  if (btnAdd) btnAdd.addEventListener("click", () => openUserModal(null));
+
+  // =================================================================
+  // 4. DELEGAÇÃO DE EVENTOS (MENU E AÇÕES)
+  // =================================================================
+  const wrapper = document.getElementById("users-list-wrapper");
+  // Clone trick para limpar listeners antigos
+  const newWrapper = wrapper.cloneNode(true);
+  wrapper.parentNode.replaceChild(newWrapper, wrapper);
+
+  newWrapper.addEventListener("click", (e) => {
+    const target = e.target;
+
+    // A. Toggle Menu (3 pontinhos)
+    const toggleBtn = target.closest(".js-toggle-menu");
+    if (toggleBtn) {
+      e.stopPropagation();
+      const id = toggleBtn.dataset.id;
+
+      // Fecha outros menus e limpa z-index
+      closeAllMenus();
+
+      // Abre o atual
+      const menu = document.getElementById(`menu-${id}`);
+      if (menu) {
+        // Se já estava aberto, apenas fecha (o closeAllMenus já fechou, então não faz nada)
+        // Se estava fechado, abrimos:
+        if (!menu.classList.contains("show")) {
+          // Lógica ajustada
+          menu.classList.add("show");
+          const parentRow = toggleBtn.closest("tr");
+          if (parentRow) parentRow.classList.add("z-active");
+        }
+      }
+      return;
     }
 
-    // Fecha menu ao clicar fora
-    // (Apenas UM listener global é necessário)
-    document.addEventListener("click", (e) => {
-        if (!e.target.closest(".action-menu")) {
-            closeAllMenus();
-        }
-    });
+    // B. Editar
+    const editBtn = target.closest(".js-action-edit");
+    if (editBtn) {
+      openUserModal(editBtn.dataset.id);
+      closeAllMenus();
+      return;
+    }
+  });
+
+  // Função auxiliar para limpar menus e z-index
+  function closeAllMenus() {
+    document
+      .querySelectorAll(".action-dropdown.show")
+      .forEach((el) => el.classList.remove("show"));
+    document
+      .querySelectorAll("tr.user-row.z-active")
+      .forEach((el) => el.classList.remove("z-active"));
+  }
+
+  // Fecha menu ao clicar fora
+  // (Apenas UM listener global é necessário)
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".action-menu")) {
+      closeAllMenus();
+    }
+  });
 }
 
 // ==========================================================================
@@ -528,7 +532,7 @@ async function openUserModal(userId) {
       ) {
         showNotification(
           "Você não tem permissão para editar este nível de usuário.",
-          "error"
+          "error",
         );
         return; // Sai antes de criar qualquer elemento visual
       }
@@ -636,8 +640,8 @@ async function openUserModal(userId) {
                     <input type="email" id="email" value="${
                       user.email || ""
                     }" ${
-      userId ? "disabled" : ""
-    } required class="form-control">
+                      userId ? "disabled" : ""
+                    } required class="form-control">
                 </div>
                 <div class="form-group">
                     <label for="select-nivel">Nível de Acesso</label>
@@ -654,17 +658,32 @@ async function openUserModal(userId) {
                     }" class="form-control">
                 </div>
 
-                <div class="form-group">
-     <label style="display:block; margin-bottom: 8px; font-weight: 600;">Receber Alertas</label>
-    <label class="switch">
-        <input type="checkbox" id="alarmesAtivos" ${user.alarmesAtivos !== false ? "checked" : ""}>
-        <span class="slider round"></span>
-    </label>
-    <span style="margin-left: 10px; font-size: 0.9rem; color: #64748b; vertical-align: top; line-height: 26px;">
-        ${user.alarmesAtivos !== false ? "Ativo" : "Inativo"}
-    </span>
-   
+                <div class="form-group" style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+    <label style="display:block; margin-bottom: 10px; font-weight: 600; color: #334155;">Canais de Notificação</label>
     
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-size: 0.9rem;">Telegram</span>
+        <label class="switch">
+            <input type="checkbox" id="alarmeTelegram" ${user.alarmeTelegram === true ? "checked" : ""}>
+            <span class="slider round"></span>
+        </label>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-size: 0.9rem;">Push (App)</span>
+        <label class="switch">
+            <input type="checkbox" id="alarmePush" ${user.alarmePush === true ? "checked" : ""}>
+            <span class="slider round"></span>
+        </label>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 0.9rem;">E-mail</span>
+        <label class="switch">
+            <input type="checkbox" id="alarmeEmail" ${user.alarmeEmail === true ? "checked" : ""}>
+            <span class="slider round"></span>
+        </label>
+    </div>
 </div>
                 
                 <hr>
@@ -737,7 +756,7 @@ async function openUserModal(userId) {
         selectedUnit,
         selectedSetor,
         selectedDispositivo,
-        closeModal
+        closeModal,
       );
     });
   } catch (error) {
@@ -842,7 +861,7 @@ function renderAccessSetores(unitId) {
         {
           unitId,
           instId: unit?.instituicaoId,
-        }
+        },
       );
 
       li.addEventListener("click", (e) => {
@@ -870,7 +889,7 @@ function renderAccessDispositivos(setorId) {
   // Mudamos de d.setorId para d.setorID (Verifique no seu banco se é ID ou Id)
   // Normalmente no saveDevice você usou 'setorID'
   const dispositivos = dispositivosPermitidos.filter(
-    (d) => d.setorID === setorId || d.setorId === setorId // Aceita os dois casos para garantir
+    (d) => d.setorID === setorId || d.setorId === setorId, // Aceita os dois casos para garantir
   );
 
   if (dispositivos.length === 0) {
@@ -887,7 +906,7 @@ function renderAccessDispositivos(setorId) {
       dispositivo.nomeDispositivo, // Nome correto do campo
       isChecked,
       "dispositivo",
-      { setorId }
+      { setorId },
     );
     dispositivoList.appendChild(li);
   });
@@ -899,8 +918,8 @@ function createAccessListItem(id, name, isChecked, type, parentIds = {}) {
 
   li.innerHTML = `
         <input type="checkbox" data-id="${id}" data-type="${type}" ${
-    isChecked ? "checked" : ""
-  }>
+          isChecked ? "checked" : ""
+        }>
         <span class="item-text">${name || id}</span>
     `;
 
@@ -967,16 +986,16 @@ function getPermittedHierarchy() {
       const instId = activeInst.id;
       return {
         instituicoesPermitidas: (hierarchyCache.instituicoes || []).filter(
-          (i) => i.id === instId
+          (i) => i.id === instId,
         ),
         unidadesPermitidas: (hierarchyCache.unidades || []).filter(
-          (u) => u.instituicaoId === instId
+          (u) => u.instituicaoId === instId,
         ),
         setoresPermitidos: (hierarchyCache.setores || []).filter(
-          (s) => s.instituicaoId === instId
+          (s) => s.instituicaoId === instId,
         ),
         dispositivosPermitidos: (hierarchyCache.dispositivos || []).filter(
-          (d) => d.instituicaoID === instId
+          (d) => d.instituicaoID === instId,
         ),
       };
     }
@@ -1040,7 +1059,7 @@ function bubbleUp(id, type, parentIds, check) {
         selectedSetor.add(parentIds.setorId);
         // Continua subindo
         const setor = hierarchyCache.setores.find(
-          (s) => s.id === parentIds.setorId
+          (s) => s.id === parentIds.setorId,
         );
         if (setor)
           bubbleUp(setor.id, "setor", { unitId: setor.unidadeId }, true);
@@ -1053,7 +1072,7 @@ function bubbleUp(id, type, parentIds, check) {
         selectedUnit.add(parentIds.unitId);
         // Continua subindo
         const unit = hierarchyCache.unidades.find(
-          (u) => u.id === parentIds.unitId
+          (u) => u.id === parentIds.unitId,
         );
         if (unit)
           bubbleUp(unit.id, "unit", { instId: unit.instituicaoId }, true);
@@ -1079,18 +1098,18 @@ function checkAndBubbleUncheck(id, type, parentIds) {
           (d) =>
             (d.setorID === parentIds.setorId ||
               d.setorId === parentIds.setorId) &&
-            d.id !== id
+            d.id !== id,
         );
 
         const algumDispositivoMarcado = dispositivosDoSetor.some((d) =>
-          selectedDispositivo.has(d.id)
+          selectedDispositivo.has(d.id),
         );
 
         if (!algumDispositivoMarcado) {
           selectedSetor.delete(parentIds.setorId);
           // Continua verificando para cima
           const setor = hierarchyCache.setores.find(
-            (s) => s.id === parentIds.setorId
+            (s) => s.id === parentIds.setorId,
           );
           if (setor)
             checkAndBubbleUncheck(setor.id, "setor", {
@@ -1104,18 +1123,18 @@ function checkAndBubbleUncheck(id, type, parentIds) {
       // Verifica se ainda há setores marcados nesta unidade
       if (parentIds.unitId) {
         const setoresDaUnidade = hierarchyCache.setores.filter(
-          (s) => s.unidadeId === parentIds.unitId && s.id !== id
+          (s) => s.unidadeId === parentIds.unitId && s.id !== id,
         );
 
         const algumSetorMarcado = setoresDaUnidade.some((s) =>
-          selectedSetor.has(s.id)
+          selectedSetor.has(s.id),
         );
 
         if (!algumSetorMarcado) {
           selectedUnit.delete(parentIds.unitId);
           // Continua verificando para cima
           const unit = hierarchyCache.unidades.find(
-            (u) => u.id === parentIds.unitId
+            (u) => u.id === parentIds.unitId,
           );
           if (unit)
             checkAndBubbleUncheck(unit.id, "unit", {
@@ -1129,11 +1148,11 @@ function checkAndBubbleUncheck(id, type, parentIds) {
       // Verifica se ainda há unidades marcadas nesta instituição
       if (parentIds.instId) {
         const unidadesDaInst = hierarchyCache.unidades.filter(
-          (u) => u.instituicaoId === parentIds.instId && u.id !== id
+          (u) => u.instituicaoId === parentIds.instId && u.id !== id,
         );
 
         const algumaUnidadeMarcada = unidadesDaInst.some((u) =>
-          selectedUnit.has(u.id)
+          selectedUnit.has(u.id),
         );
 
         if (!algumaUnidadeMarcada) {
@@ -1150,7 +1169,7 @@ function initializeAccessTree(userData) {
     // Para cada dispositivo marcado, marca seus pais
     selectedDispositivo.forEach((dispId) => {
       const dispositivo = hierarchyCache.dispositivos.find(
-        (d) => d.id === dispId
+        (d) => d.id === dispId,
       );
       if (dispositivo) {
         const setorId = dispositivo.setorID || dispositivo.setorId;
@@ -1160,7 +1179,7 @@ function initializeAccessTree(userData) {
         if (setor) selectedUnit.add(setor.unidadeId);
 
         const unit = hierarchyCache.unidades.find(
-          (u) => u.id === setor?.unidadeId
+          (u) => u.id === setor?.unidadeId,
         );
         if (unit) selectedInst.add(unit.instituicaoId);
       }
@@ -1173,7 +1192,7 @@ function initializeAccessTree(userData) {
         selectedUnit.add(setor.unidadeId);
 
         const unit = hierarchyCache.unidades.find(
-          (u) => u.id === setor.unidadeId
+          (u) => u.id === setor.unidadeId,
         );
         if (unit) selectedInst.add(unit.instituicaoId);
       }
@@ -1211,8 +1230,9 @@ async function saveUser(
   unitSet,
   setorSet,
   dispSet,
-  closeModalCallback
+  closeModalCallback,
 ) {
+  
   const isNew = !userId;
   const email = document.getElementById("email").value;
   const nome = document.getElementById("nome").value;
@@ -1220,7 +1240,9 @@ async function saveUser(
   const senha = document.getElementById("senha")?.value;
   const senhaConfirm = document.getElementById("senha-confirm")?.value;
   const chatId = document.getElementById("chatId").value;
-  const alarmesAtivos = document.getElementById("alarmesAtivos").checked;
+  const alarmeTelegram = document.getElementById("alarmeTelegram").checked;
+  const alarmePush = document.getElementById("alarmePush").checked;
+  const alarmeEmail = document.getElementById("alarmeEmail").checked;
   const ativo = document.getElementById("ativo").checked;
 
   try {
@@ -1230,7 +1252,9 @@ async function saveUser(
       email,
       nivel,
       chatId,
-      alarmesAtivos,
+      alarmeTelegram, 
+      alarmePush,
+      alarmeEmail,
       ativo,
       acessoInstituicoes: Array.from(instSet),
       acessoUnidades: Array.from(unitSet),
@@ -1248,7 +1272,7 @@ async function saveUser(
 
         if (targetData.nivel === "superAdmin" && ativo === false) {
           throw new Error(
-            "Usuários com nível superAdmin não podem ser desativados."
+            "Usuários com nível superAdmin não podem ser desativados.",
           );
         }
       }
@@ -1288,7 +1312,7 @@ async function toggleUserActive(userId, status) {
 
     showNotification(
       status ? "Usuário restaurado!" : "Usuário desativado!",
-      "success"
+      "success",
     );
     showUsuariosView(); // Recarrega a tabela
   } catch (error) {

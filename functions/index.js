@@ -41,73 +41,64 @@ function getTransporter() {
 // 1. HELPER: Buscar Tokens
 // ==================================================================
 async function getEligibleTokens(macAddress) {
-  logger.info(
-    `🔍 BUSCA: Procurando na coleção 'usuarios' pelo MAC: '${macAddress}'`,
-  );
+    logger.info(`🔍 BUSCA PUSH: Procurando usuários para MAC: '${macAddress}'`);
+    
+    const tokens = [];
+    
+    try {
+        const usersSnapshot = await db.collection('usuarios') 
+            .where('ativo', '==', true)
+            .where('acessoDispositivos', 'array-contains', macAddress)
+            .get();
 
-  const tokens = [];
-
-  try {
-    const usersSnapshot = await db
-      .collection("usuarios")
-      .where("ativo", "==", true)
-      .where("alarmesAtivos", "==", true)
-      .where("acessoDispositivos", "array-contains", macAddress)
-      .get();
-
-    if (usersSnapshot.empty) {
-      logger.warn(" ALERTA: Nenhum usuário encontrado.");
-    }
-
-    usersSnapshot.forEach((doc) => {
-      const userData = doc.data();
-      if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
-        userData.fcmTokens.forEach((token) => {
-          if (token) tokens.push(token);
+        usersSnapshot.forEach(doc => {
+            const userData = doc.data();
+            
+            if (userData.alarmePush === true) {
+                if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
+                    userData.fcmTokens.forEach(token => {
+                        if (token) tokens.push(token);
+                    });
+                }
+            }
         });
-      }
-    });
 
-    const uniqueTokens = [...new Set(tokens)];
-    return uniqueTokens;
-  } catch (error) {
-    logger.error("❌ ERRO CRÍTICO NA BUSCA:", error);
-    return [];
-  }
+        return [...new Set(tokens)];
+
+    } catch (error) {
+        logger.error("❌ ERRO BUSCA TOKENS:", error);
+        return [];
+    }
 }
-
 // ==================================================================
 // 1B. HELPER: Buscar E-mails Elegíveis
 // ==================================================================
 async function getEligibleEmails(macAddress) {
-  logger.info(
-    `🔍 BUSCA E-MAILS: Procurando na coleção 'usuarios' pelo MAC: '${macAddress}'`,
-  );
+    logger.info(`🔍 BUSCA EMAILS: Procurando usuários para MAC: '${macAddress}'`);
+    
+    const emails = [];
+    
+    try {
+        const usersSnapshot = await db.collection('usuarios') 
+            .where('ativo', '==', true)
+            .where('acessoDispositivos', 'array-contains', macAddress)
+            .get();
 
-  const emails = [];
+        usersSnapshot.forEach(doc => {
+            const userData = doc.data();
+            
+            // FILTRO DE MEMÓRIA: Verifica se o usuário quer receber E-MAIL
+            if (userData.alarmeEmail === true && userData.email) {
+                emails.push(userData.email);
+            }
+        });
 
-  try {
-    const usersSnapshot = await db
-      .collection("usuarios")
-      .where("ativo", "==", true)
-      .where("alarmesAtivos", "==", true)
-      .where("acessoDispositivos", "array-contains", macAddress)
-      .get();
+        return [...new Set(emails)];
 
-    usersSnapshot.forEach((doc) => {
-      const userData = doc.data();
-      if (userData.email) {
-        emails.push(userData.email);
-      }
-    });
-
-    const uniqueEmails = [...new Set(emails)];
-    logger.info(`📧 E-MAILS FINAIS: ${uniqueEmails.length} para envio.`);
-    return uniqueEmails;
-  } catch (error) {
-    logger.error("❌ ERRO CRÍTICO NA BUSCA DE E-MAILS:", error);
-    return [];
-  }
+    } catch (error) {
+        logger.error("❌ ERRO BUSCA EMAILS:", error);
+        return [];
+    }
 }
 
 // ==================================================================
@@ -169,6 +160,28 @@ async function sendEmails(emails, subject, textBody, htmlBody) {
   });
 
   await Promise.all(promessasEnvio);
+}
+
+// ==================================================================
+// 2B. HELPER: Enviar Telegram
+// ==================================================================
+async function getEligibleTelegramIds(macAddress) {
+    const chatIds = [];
+    try {
+        const usersSnapshot = await db.collection('usuarios') 
+            .where('ativo', '==', true)
+            .where('acessoDispositivos', 'array-contains', macAddress)
+            .get();
+
+        usersSnapshot.forEach(doc => {
+            const userData = doc.data();
+            // Verifica a flag E se tem chatID cadastrado
+            if (userData.alarmeTelegram === true && userData.chatId) {
+                chatIds.push(userData.chatId);
+            }
+        });
+        return [...new Set(chatIds)];
+    } catch (error) { return []; }
 }
 
 // ==================================================================
@@ -345,25 +358,27 @@ exports.onAlarmChange = onDocumentWritten(
     }
   },
 );
-
 // ==================================================================
-// HELPER: Gerador de Template HTML
+// HELPER: Gerador de Template HTML (Formatado com 2 casas)
 // ==================================================================
 function generateEmailHtml(tipo, dados) {
     const isAlarm = tipo === 'ALARM_START';
     
+    const fmt = (val) => {
+        if (val === undefined || val === null || val === '') return '--';
+        return Number(val).toFixed(2);
+    };
+
     const triggersArray = (dados.disparadoPor && Array.isArray(dados.disparadoPor)) ? dados.disparadoPor.join(' ') : '';
     const motivoTexto = dados.motivo || '';
-    
     const textoAnalise = (triggersArray + ' ' + motivoTexto).toLowerCase();
     
-    let tituloBanner = isAlarm ? ' 🚨 ALERTA DO SISTEMA' : '✅ SISTEMA NORMALIZADO';
+    let tituloBanner = isAlarm ? '🚨 ALERTA DO SISTEMA' : '✅ SISTEMA NORMALIZADO';
     
     if (isAlarm) {
         if (textoAnalise.includes('umidade') || textoAnalise.includes('umi')) {
             tituloBanner = '🚨 ALERTA DE UMIDADE';
-        } 
-        else if (textoAnalise.includes('temp') || textoAnalise.includes('sonda')) {
+        } else if (textoAnalise.includes('temp') || textoAnalise.includes('sonda')) {
             tituloBanner = '🚨 ALERTA DE TEMPERATURA';
         }
     }
@@ -389,7 +404,7 @@ function generateEmailHtml(tipo, dados) {
         rows += `
         <tr>
             <td style="padding: 8px; border-bottom: 1px solid #eee;">🌡️ Sonda Principal</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${dados.leituras.sonda}°C</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${fmt(dados.leituras.sonda)}°C</td>
         </tr>`;
     }
 
@@ -397,7 +412,7 @@ function generateEmailHtml(tipo, dados) {
         rows += `
         <tr>
             <td style="padding: 8px; border-bottom: 1px solid #eee;">🏠 Ambiente</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee;">${dados.leituras.ambiente}°C</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${fmt(dados.leituras.ambiente)}°C</td>
         </tr>`;
     }
 
@@ -405,7 +420,7 @@ function generateEmailHtml(tipo, dados) {
         rows += `
         <tr>
             <td style="padding: 8px; border-bottom: 1px solid #eee;">💧 Umidade</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee;">${dados.leituras.umidade}%</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${fmt(dados.leituras.umidade)}%</td>
         </tr>`;
     }
 
