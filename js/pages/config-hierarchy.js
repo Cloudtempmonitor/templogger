@@ -3,6 +3,7 @@
 // ==========================================================================
 
 // Importações Firebase
+
 import { db } from "../services/firebase.js";
 import {
     collection,
@@ -14,6 +15,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Importações do Sistema
+import { buscarDadosCep, getEstadoOptions } from "../services/address.service.js";
 import { getUser, getActiveInstitution } from "../core/state.js";
 import { hasRole, ROLES, permissions } from "../core/permissions.js";
 import { loadHierarchyCache, getCachedHierarchy } from "../services/hierarchy.service.js";
@@ -601,6 +603,7 @@ async function openHierarchyModal(type, docId = null) {
     let title = "";
     
     if (docId) {
+        // Voltamos para o switch case para garantir a busca correta
         switch (type) {
             case "instituicao":
                 data = (hierarchyCache.instituicoes || []).find(i => i.id === docId) || {};
@@ -615,23 +618,56 @@ async function openHierarchyModal(type, docId = null) {
                 title = "Editar Setor";
                 break;
         }
+        console.log("Dados encontrados:", data); // DEBUG - Verifique se 'nome' e 'cnpj' aparecem aqui
     } else {
-        switch (type) {
-            case "instituicao":
-                title = "Nova Instituição";
-                break;
-            case "unidade":
-                title = "Nova Unidade";
-                break;
-            case "setor":
-                title = "Novo Setor";
-                break;
-        }
+        // Títulos para novo cadastro
+        const titles = {
+            instituicao: "Nova Instituição",
+            unidade: "Nova Unidade",
+            setor: "Novo Setor"
+        };
+        title = titles[type];
     }
-    
-    // Cria modal
-    const modalOverlay = document.createElement("div");
-    modalOverlay.className = "admin-modal-overlay";
+
+    const addressHtml = `
+        <div class="form-section" style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e9ecef;">
+            <h4 style="margin: 0 0 10px; font-size: 0.85rem; color: #6c757d; text-transform: uppercase;">Endereço / Localização</h4>
+            
+            <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="cep" style="font-size: 0.85rem;">CEP</label>
+                    <div style="position: relative;">
+                        <input type="text" id="cep" value="${data.cep || ""}" class="form-control" placeholder="00000-000" maxlength="9">
+                        <span id="cep-loading" style="display:none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #3498db;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </div>
+                </div>
+                 <div class="form-group" style="flex: 1;">
+                    <label for="uf" style="font-size: 0.85rem;">Estado (UF) *</label>
+                    <select id="uf" class="form-control" required style="background-color: #fff;">
+                        ${getEstadoOptions(data.uf)}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <div class="form-group" style="flex: 3;">
+                    <label for="logradouro" style="font-size: 0.85rem;">Logradouro</label>
+                    <input type="text" id="logradouro" value="${data.logradouro || data.endereco || ""}" class="form-control" placeholder="Rua, Av...">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="numero" style="font-size: 0.85rem;">Número</label>
+                    <input type="text" id="numero" value="${data.numero || ""}" class="form-control">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="cidade" style="font-size: 0.85rem;">Cidade</label>
+                <input type="text" id="cidade" value="${data.cidade || ""}" class="form-control">
+            </div>
+        </div>
+    `;
     
     // Campos específicos por tipo
     let extraFields = "";
@@ -642,14 +678,41 @@ async function openHierarchyModal(type, docId = null) {
                 <label for="cnpj">CNPJ (opcional)</label>
                 <input type="text" id="cnpj" value="${data.cnpj || ""}" class="form-control" placeholder="00.000.000/0000-00">
             </div>
+            ${addressHtml}
+        `;
+    } else if (type === "unidade") {
+        extraFields = `
             <div class="form-group">
-                <label for="endereco">Endereço (opcional)</label>
-                <input type="text" id="endereco" value="${data.endereco || ""}" class="form-control" placeholder="Rua, número, bairro">
+                <label>Instituição vinculada</label>
+                <input type="text" value="${getInstituicaoNome(currentSelectedInstId)}" class="form-control" disabled>
+                <input type="hidden" id="instituicaoId" value="${currentSelectedInstId}">
+            </div>
+            <div class="form-group">
+                <label for="cnpj">CNPJ (opcional)</label>
+                <input type="text" id="cnpj" value="${data.cnpj || ""}" class="form-control" placeholder="00.000.000/0000-00">
+            </div>
+            <h4 style="margin: 15px 0 10px; font-size: 0.9em; text-transform: uppercase; color: #666; border-bottom: 1px solid #eee; padding-bottom: 5px;">Localização Física</h4>
+            ${addressHtml}
+        `;
+    } else if (type === "setor") {
+        extraFields = `
+             <div class="form-group">
+                <label>Unidade vinculada</label>
+                <input type="text" value="${getUnidadeNome(currentSelectedUnitId)}" class="form-control" disabled>
+                <input type="hidden" id="unidadeId" value="${currentSelectedUnitId}">
+            </div>
+             <div class="form-group">
+                <label>Instituição</label>
+                <input type="text" value="${getInstituicaoNome(currentSelectedInstId)}" class="form-control" disabled>
             </div>
         `;
     }
     
-    modalOverlay.innerHTML = `
+    // Cria modal
+    const modalOverlay = document.createElement("div");
+    modalOverlay.className = "admin-modal-overlay";
+
+   modalOverlay.innerHTML = `
         <div class="admin-modal-content">
             <div class="modal-header">
                 <h3>${title}</h3>
@@ -660,65 +723,64 @@ async function openHierarchyModal(type, docId = null) {
                         <label for="nome">Nome *</label>
                         <input type="text" id="nome" value="${data.nome || ""}" required class="form-control" autofocus>
                     </div>
-                    
                     ${extraFields}
-                    
-                    ${type === "unidade" ? `
-                        <div class="form-group">
-                            <label>Instituição vinculada</label>
-                            <input type="text" value="${getInstituicaoNome(currentSelectedInstId)}" class="form-control" disabled>
-                            <input type="hidden" id="instituicaoId" value="${currentSelectedInstId}">
-                        </div>
-                    ` : ""}
-                    
-                    ${type === "setor" ? `
-                        <div class="form-group">
-                            <label>Unidade vinculada</label>
-                            <input type="text" value="${getUnidadeNome(currentSelectedUnitId)}" class="form-control" disabled>
-                            <input type="hidden" id="unidadeId" value="${currentSelectedUnitId}">
-                        </div>
-                        <div class="form-group">
-                            <label>Instituição</label>
-                            <input type="text" value="${getInstituicaoNome(currentSelectedInstId)}" class="form-control" disabled>
-                        </div>
-                    ` : ""}
                 </form>
             </div>
             <div class="modal-actions">
-                ${docId ? `
-                    <button type="button" class="admin-button-delete" id="delete-hierarchy-btn">
-                        <i class="fas fa-trash"></i> Excluir
-                    </button>
-                ` : ""}
+                ${docId ? `<button type="button" class="admin-button-delete" id="delete-hierarchy-btn"><i class="fas fa-trash"></i> Excluir</button>` : ""}
                 <button type="button" class="admin-button-cancel">Cancelar</button>
-                <button type="submit" form="hierarchy-form" class="admin-button-save">
-                    <i class="fas fa-save"></i> ${docId ? "Atualizar" : "Salvar"}
-                </button>
+                <button type="submit" form="hierarchy-form" class="admin-button-save"><i class="fas fa-save"></i> ${docId ? "Atualizar" : "Salvar"}</button>
             </div>
         </div>
     `;
     
     document.body.appendChild(modalOverlay);
     
+
+    // 1. Lógica do CEP 
+    const cepInput = modalOverlay.querySelector("#cep");
+    if (cepInput) {
+        cepInput.addEventListener("blur", async (e) => {
+            const val = e.target.value;
+            if (val.replace(/\D/g, '').length === 8) {
+                const loadingInfo = modalOverlay.querySelector("#cep-loading");
+                if(loadingInfo) loadingInfo.style.display = "block";
+                
+                const res = await buscarDadosCep(val);
+                
+                if(loadingInfo) loadingInfo.style.display = "none";
+
+                if (!res.error) {
+                    // Preenche os campos automaticamente
+                    const fLogradouro = modalOverlay.querySelector("#logradouro");
+                    const fCidade = modalOverlay.querySelector("#cidade");
+                    const fUf = modalOverlay.querySelector("#uf");
+                    
+                    if (fLogradouro) fLogradouro.value = res.data.logradouro;
+                    if (fCidade) fCidade.value = res.data.localidade;
+                    if (fUf) fUf.value = res.data.uf;
+                    
+                    // Joga o foco para o número
+                    const fNumero = modalOverlay.querySelector("#numero");
+                    if (fNumero) fNumero.focus();
+                } else {
+                    showNotification(res.msg, "warning");
+                }
+            }
+        });
+    }
+
     // Event listeners do modal
-    const closeModal = () => {
-        if (document.body.contains(modalOverlay)) {
-            document.body.removeChild(modalOverlay);
-        }
+   const closeModal = () => {
+        if (document.body.contains(modalOverlay)) document.body.removeChild(modalOverlay);
     };
-    
-    // Botão Cancelar
     modalOverlay.querySelector(".admin-button-cancel").addEventListener("click", closeModal);
-    
-    // Fecha ao clicar fora
-    modalOverlay.addEventListener("click", (e) => {
-        if (e.target === modalOverlay) closeModal();
-    });
+    modalOverlay.addEventListener("click", (e) => { if (e.target === modalOverlay) closeModal(); });
     
     // Submissão do formulário
-    modalOverlay.querySelector("#hierarchy-form").addEventListener("submit", (e) => {
+   modalOverlay.querySelector("#hierarchy-form").addEventListener("submit", (e) => {
         e.preventDefault();
-        saveHierarchyItem(type, docId, closeModal);
+        saveHierarchyItem(type, docId, closeModal, modalOverlay); 
     });
     
     // Botão de exclusão
@@ -776,21 +838,21 @@ function checkAndUpdateSelection() {
    OPERAÇÕES CRUD
    ========================================================================== */
 
-async function saveHierarchyItem(type, docId, closeModal, formRef) {
+async function saveHierarchyItem(type, docId, closeModal, context) {
     const currentUser = getUser();
     if (!currentUser) return;
 
-    const context = formRef || document;
+    // Se context não foi passado (chamada antiga), usa document
+    const formScope = context || document;
 
-    const saveButton = context.querySelector(".admin-button-save") || document.querySelector(".admin-button-save");
-    
+    const saveButton = formScope.querySelector(".admin-button-save");
     const originalBtnText = saveButton ? saveButton.innerHTML : "";
     if (saveButton) {
         saveButton.disabled = true;
         saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
     }
 
-    const nomeInput = context.querySelector("#nome");
+    const nomeInput = formScope.querySelector("#nome");
     const nome = nomeInput ? nomeInput.value.trim() : "";
 
     if (!nome) {
@@ -803,29 +865,51 @@ async function saveHierarchyItem(type, docId, closeModal, formRef) {
     }
 
     try {
-        let collectionName, data, ref;
-        let baseData = {
+        let collectionName;
+        
+        // Base Data
+        let data = {
             nome,
             updatedAt: serverTimestamp(),
-            updatedBy:currentUser.uid 
+            updatedBy: currentUser.uid
         };
 
-        const cnpjInput = context.querySelector("#cnpj");
-        const enderecoInput = context.querySelector("#endereco");
+        // --- CAPTURA DE ENDEREÇO (Instituição e Unidade) ---
+        if (type === "instituicao" || type === "unidade") {
+            const cepVal = formScope.querySelector("#cep")?.value.trim() || null;
+            const logradouroVal = formScope.querySelector("#logradouro")?.value.trim() || "";
+            const numeroVal = formScope.querySelector("#numero")?.value.trim() || "";
+            const cidadeVal = formScope.querySelector("#cidade")?.value.trim() || null;
+            const ufVal = formScope.querySelector("#uf")?.value || null; // <--- ORO PARA O FUSO
+
+            // Cria um endereço completo legível
+            const enderecoCompleto = logradouroVal 
+                ? `${logradouroVal}, ${numeroVal} - ${cidadeVal}/${ufVal}` 
+                : (formScope.querySelector("#endereco")?.value.trim() || null); // Fallback antigo
+
+            // Adiciona ao objeto data
+            data = {
+                ...data,
+                cep: cepVal,
+                logradouro: logradouroVal,
+                numero: numeroVal,
+                cidade: cidadeVal,
+                uf: ufVal,      // Salvando UF separado!
+                endereco: enderecoCompleto // Mantendo compatibilidade
+            };
+        }
+
+        const cnpjInput = formScope.querySelector("#cnpj");
 
         switch (type) {
             case "instituicao":
                 collectionName = "instituicoes";
-                data = {
-                    ...baseData,
-                    cnpj: cnpjInput ? cnpjInput.value.trim() : null,
-                    endereco: enderecoInput ? enderecoInput.value.trim() : null,
-                };
+                data.cnpj = cnpjInput ? cnpjInput.value.trim() : null;
                 break;
 
             case "unidade":
                 collectionName = "unidades";
-                data = { ...baseData };
+                data.cnpj = cnpjInput ? cnpjInput.value.trim() : null;
                 if (!docId) {
                     if (!currentSelectedInstId) throw new Error("Instituição não selecionada.");
                     data.instituicaoId = currentSelectedInstId;
@@ -834,7 +918,6 @@ async function saveHierarchyItem(type, docId, closeModal, formRef) {
 
             case "setor":
                 collectionName = "setores";
-                data = { ...baseData };
                 if (!docId) {
                     if (!currentSelectedUnitId) throw new Error("Unidade não selecionada.");
                     if (!currentSelectedInstId) throw new Error("Instituição não selecionada.");
@@ -850,27 +933,21 @@ async function saveHierarchyItem(type, docId, closeModal, formRef) {
         if (!docId) {
             data.createdBy = currentUser.uid;
             data.createdAt = serverTimestamp();
-        }
-
-        if (docId) {
-            ref = doc(db, collectionName, docId);
-            await updateDoc(ref, data);
-            showNotification(`${type} atualizado com sucesso`, "success");
-        } else {
-            ref = doc(collection(db, collectionName));
-            await setDoc(ref, data);
+            // Para criar novo
+            await setDoc(doc(collection(db, collectionName)), data);
             showNotification(`${type} criado com sucesso`, "success");
+        } else {
+            // Para atualizar
+            await updateDoc(doc(db, collectionName, docId), data);
+            showNotification(`${type} atualizado com sucesso`, "success");
         }
 
         if (closeModal) closeModal();
 
-        try {
-            await loadHierarchyCache(true);
-            hierarchyCache = getCachedHierarchy();
-            await showHierarchyView();
-        } catch (viewError) {
-            console.error("Erro ao atualizar a visualização:", viewError);
-        }
+        // Recarrega a view
+        await loadHierarchyCache(true);
+        hierarchyCache = getCachedHierarchy();
+        await showHierarchyView();
 
     } catch (error) {
         console.error(`Erro ao salvar ${type}:`, error);

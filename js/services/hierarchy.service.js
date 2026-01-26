@@ -80,3 +80,4 @@ export function clearHierarchyCache() {
     hierarchyCache = { instituicoes: [], unidades: [], setores: [], dispositivos: [] };
     isLoaded = false;
 }
+

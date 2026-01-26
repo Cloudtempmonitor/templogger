@@ -1,12 +1,9 @@
 /**
  * index.js - Cloud Functions
+ * Versão Atualizada com Gestão de Fuso Horário por UF da Unidade
  */
 
-const { onSchedule } = require("firebase-functions/v2/scheduler");
-const {
-  onDocumentWritten,
-  onDocumentUpdated,
-} = require("firebase-functions/v2/firestore");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
@@ -15,11 +12,47 @@ const { defineJsonSecret } = require("firebase-functions/params");
 admin.initializeApp();
 const db = admin.firestore();
 
-const OFFLINE_THRESHOLD_SECONDS = 120;
-
 const emailConfig = defineJsonSecret("EMAIL_CONFIG");
 
 let mailTransport = null;
+
+// ==================================================================
+// 0. CONSTANTES DE FUSO HORÁRIO
+// ==================================================================
+const TIMEZONES_BR = {
+    'AC': 'America/Rio_Branco',
+    'AL': 'America/Sao_Paulo',
+    'AP': 'America/Sao_Paulo',
+    'AM': 'America/Manaus',
+    'BA': 'America/Sao_Paulo',
+    'CE': 'America/Sao_Paulo',
+    'DF': 'America/Sao_Paulo',
+    'ES': 'America/Sao_Paulo',
+    'GO': 'America/Sao_Paulo',
+    'MA': 'America/Sao_Paulo',
+    'MT': 'America/Cuiaba',      
+    'MS': 'America/Campo_Grande',
+    'MG': 'America/Sao_Paulo',
+    'PA': 'America/Belem',
+    'PB': 'America/Sao_Paulo',
+    'PR': 'America/Sao_Paulo',
+    'PE': 'America/Sao_Paulo',
+    'PI': 'America/Sao_Paulo',
+    'RJ': 'America/Sao_Paulo',
+    'RN': 'America/Sao_Paulo',
+    'RS': 'America/Sao_Paulo',
+    'RO': 'America/Porto_Velho',
+    'RR': 'America/Boa_Vista',
+    'SC': 'America/Sao_Paulo',
+    'SP': 'America/Sao_Paulo',
+    'SE': 'America/Sao_Paulo',
+    'TO': 'America/Sao_Paulo'
+};
+
+const getFusoPorUF = (uf) => {
+    if (!uf) return 'America/Sao_Paulo';
+    return TIMEZONES_BR[uf.toUpperCase().trim()] || 'America/Sao_Paulo';
+};
 
 // ==================================================================
 // HELPER: Inicializador do Transporter 
@@ -42,9 +75,7 @@ function getTransporter() {
 // ==================================================================
 async function getEligibleTokens(macAddress) {
     logger.info(`🔍 BUSCA PUSH: Procurando usuários para MAC: '${macAddress}'`);
-    
     const tokens = [];
-    
     try {
         const usersSnapshot = await db.collection('usuarios') 
             .where('ativo', '==', true)
@@ -53,7 +84,6 @@ async function getEligibleTokens(macAddress) {
 
         usersSnapshot.forEach(doc => {
             const userData = doc.data();
-            
             if (userData.alarmePush === true) {
                 if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
                     userData.fcmTokens.forEach(token => {
@@ -62,22 +92,19 @@ async function getEligibleTokens(macAddress) {
                 }
             }
         });
-
         return [...new Set(tokens)];
-
     } catch (error) {
         logger.error("❌ ERRO BUSCA TOKENS:", error);
         return [];
     }
 }
+
 // ==================================================================
 // 1B. HELPER: Buscar E-mails Elegíveis
 // ==================================================================
 async function getEligibleEmails(macAddress) {
     logger.info(`🔍 BUSCA EMAILS: Procurando usuários para MAC: '${macAddress}'`);
-    
     const emails = [];
-    
     try {
         const usersSnapshot = await db.collection('usuarios') 
             .where('ativo', '==', true)
@@ -86,15 +113,12 @@ async function getEligibleEmails(macAddress) {
 
         usersSnapshot.forEach(doc => {
             const userData = doc.data();
-            
-            // FILTRO DE MEMÓRIA: Verifica se o usuário quer receber E-MAIL
+            // FILTRO: Verifica se o usuário quer receber E-MAIL
             if (userData.alarmeEmail === true && userData.email) {
                 emails.push(userData.email);
             }
         });
-
         return [...new Set(emails)];
-
     } catch (error) {
         logger.error("❌ ERRO BUSCA EMAILS:", error);
         return [];
@@ -144,7 +168,7 @@ async function sendEmails(emails, subject, textBody, htmlBody) {
 
   const promessasEnvio = emails.map(async (email) => {
     const mailOptions = {
-      from: `Cloud Monitor <${emailConfig.value().user || "noreply@monitor.com"}>`, // Uso seguro do .value() aqui
+      from: `Cloud Monitor <${emailConfig.value().user || "noreply@monitor.com"}>`,
       to: email,
       subject: subject,
       text: textBody,
@@ -160,28 +184,6 @@ async function sendEmails(emails, subject, textBody, htmlBody) {
   });
 
   await Promise.all(promessasEnvio);
-}
-
-// ==================================================================
-// 2B. HELPER: Enviar Telegram
-// ==================================================================
-async function getEligibleTelegramIds(macAddress) {
-    const chatIds = [];
-    try {
-        const usersSnapshot = await db.collection('usuarios') 
-            .where('ativo', '==', true)
-            .where('acessoDispositivos', 'array-contains', macAddress)
-            .get();
-
-        usersSnapshot.forEach(doc => {
-            const userData = doc.data();
-            // Verifica a flag E se tem chatID cadastrado
-            if (userData.alarmeTelegram === true && userData.chatId) {
-                chatIds.push(userData.chatId);
-            }
-        });
-        return [...new Set(chatIds)];
-    } catch (error) { return []; }
 }
 
 // ==================================================================
@@ -208,6 +210,7 @@ exports.onAlarmChange = onDocumentWritten(
 
     if (wasActive === isActive) return;
 
+    // 1. Busca dados do DISPOSITIVO
     const deviceSnap = await db.collection("dispositivos").doc(mac).get();
     if (!deviceSnap.exists) {
       logger.error("❌ Dispositivo não encontrado.");
@@ -216,8 +219,64 @@ exports.onAlarmChange = onDocumentWritten(
 
     const devData = deviceSnap.data();
     const nomeDisp = devData.nomeDispositivo || "Dispositivo";
-    const nomeInst = devData.nomeInstituicao || "Instituição";
+    const nomeUnidade = devData.nomeUnidade || "Unidade";
     const nomeSetor = devData.nomeSetor || "Setor";
+
+    // -------------------------------------------------------------
+    // LÓGICA DE FUSO HORÁRIO AUTOMÁTICO (Baseado na UF da Unidade)
+    // -------------------------------------------------------------
+    let timeZoneCalculado = 'America/Sao_Paulo'; // Default
+
+    logger.info(`📍 DADOS DO DISPOSITIVO ${mac}:`, {
+    nomeDispositivo: devData.nomeDispositivo,
+    unidadeID: devData.unidadeID,
+    nomeUnidade: devData.nomeUnidade,
+    timeZone: devData.timeZone,
+    todosCampos: Object.keys(devData) 
+});
+
+
+
+   if (devData.unidadeID) {
+    try {
+        // Referência CORRETA à coleção "unidades"
+        const unitRef = db.collection("unidades").doc(devData.unidadeID);
+        logger.info(`📍 Buscando unidade com ID: ${devData.unidadeID}`);
+        
+        const unitSnap = await unitRef.get();
+        
+        if (unitSnap.exists) {
+            const unitData = unitSnap.data();
+            logger.info(`📍 DADOS DA UNIDADE encontrados:`, unitData);
+            
+            // VERIFICAÇÃO EXPLÍCITA do campo uf
+            if (unitData.uf) {
+                const uf = unitData.uf.trim().toUpperCase();
+                logger.info(`📍 UF encontrada: "${uf}"`);
+                
+                timeZoneCalculado = getFusoPorUF(uf);
+                logger.info(`📍 Fuso calculado: ${uf} -> ${timeZoneCalculado}`);
+            } else {
+                logger.warn(`📍 Unidade encontrada MAS SEM CAMPO 'uf'. Campos disponíveis:`, Object.keys(unitData));
+            }
+        } else {
+            logger.warn(`📍 Unidade com ID "${devData.unidadeID}" NÃO EXISTE no Firestore.`);
+        }
+    } catch (err) {
+        logger.error(`📍 ERRO ao buscar unidade ${devData.unidadeID}:`, err);
+    }
+} else {
+    logger.warn(`📍 Dispositivo ${mac} NÃO tem campo 'unidadeID'.`);
+    
+    // Fallback: verificar se tem timeZone direto
+    if (devData.timeZone) {
+        timeZoneCalculado = devData.timeZone;
+        logger.info(`📍 Usando timeZone direto do dispositivo: ${timeZoneCalculado}`);
+    }
+}
+    
+    logger.info(`📍 Fuso horário definido para ${mac}: ${timeZoneCalculado}`);
+    // -------------------------------------------------------------
 
     // INÍCIO DE ALARME
     if (!wasActive && isActive) {
@@ -232,15 +291,17 @@ exports.onAlarmChange = onDocumentWritten(
       await sendNotification(
         tokens,
         `🚨 Alerta: ${nomeDisp}`,
-        `${nomeInst} - ${nomeSetor}\nMotivo: ${tipoAlarme}`,
+        `${nomeUnidade} - ${nomeSetor}\nMotivo: ${tipoAlarme}`,
         { mac, type: "alarm_start", alarmType: tipoAlarme, eventId: idEvento },
       );
+
       let leiturasParaEmail = {
         sonda: "--",
         ambiente: "--",
         umidade: "--",
         statusSonda: "Normal",
       };
+
       if (idEvento) {
         const eventSnap = await db
           .collection(`dispositivos/${mac}/eventos`)
@@ -260,15 +321,16 @@ exports.onAlarmChange = onDocumentWritten(
       }
 
       const dadosEmail = {
-        instituicao: nomeInst,
+        unidade: nomeUnidade,
         setor: nomeSetor,
         dispositivo: nomeDisp,
         motivo: tipoAlarme,
         leituras: leiturasParaEmail,
+        startTime: admin.firestore.Timestamp.now(),
+        timeZone: timeZoneCalculado 
       };
 
       const htmlBody = generateEmailHtml("ALARM_START", dadosEmail);
-
       const textBody = `ALERTA: ${nomeDisp} no setor ${nomeSetor}. Motivo: ${tipoAlarme}. Sonda: ${leiturasParaEmail.sonda}°C`;
 
       await sendEmails(
@@ -283,7 +345,8 @@ exports.onAlarmChange = onDocumentWritten(
     else if (wasActive && !isActive) {
       const tipoAnterior = beforeData.tipo || "Alarme Desconhecido";
       const idEvento = beforeData.idEvento || "";
-
+      let dataInicioEvento = admin.firestore.Timestamp.now();
+      
       const [tokens, emails] = await Promise.all([
         getEligibleTokens(mac),
         getEligibleEmails(mac),
@@ -292,7 +355,7 @@ exports.onAlarmChange = onDocumentWritten(
       await sendNotification(
         tokens,
         `✅ Normalizado: ${nomeDisp}`,
-        `${nomeInst} - ${nomeSetor}\nO parâmetro ${tipoAnterior} retornou aos níveis aceitáveis.`,
+        `${nomeUnidade} - ${nomeSetor}\nO parâmetro ${tipoAnterior} retornou aos níveis aceitáveis.`,
         { mac, type: "alarm_end", lastAlarmType: tipoAnterior },
       );
 
@@ -309,6 +372,7 @@ exports.onAlarmChange = onDocumentWritten(
           .collection(`dispositivos/${mac}/eventos`)
           .doc(idEvento)
           .get();
+
         if (eventSnap.exists) {
           const ev = eventSnap.data();
 
@@ -323,7 +387,6 @@ exports.onAlarmChange = onDocumentWritten(
           // CÁLCULO DA DURAÇÃO 
           if (ev.startTime) {
             const inicio = ev.startTime.toDate();
-
             const fim = ev.endTime ? ev.endTime.toDate() : new Date();
 
             const diffMs = fim - inicio; 
@@ -337,29 +400,34 @@ exports.onAlarmChange = onDocumentWritten(
             } else {
               duracaoTexto = `${minutos} minutos`;
             }
+            
+            // Define data real de início para o email
+            dataInicioEvento = ev.startTime; 
           }
         }
       }
 
       const dadosEmail = {
-        instituicao: nomeInst,
+        unidade: nomeUnidade,
         setor: nomeSetor,
         dispositivo: nomeDisp,
         motivo: tipoAnterior,
         duracao: duracaoTexto, 
         leituras: leiturasParaEmail,
+        startTime: dataInicioEvento,
+        timeZone: timeZoneCalculado 
       };
 
       const htmlBody = generateEmailHtml("ALARM_END", dadosEmail);
-
       const textBody = `NORMALIZADO: ${nomeDisp}. Duração: ${duracaoTexto}. Leitura atual: ${leiturasParaEmail.sonda || "?"}°C`;
 
       await sendEmails(emails, `[NORMALIZADO] ${nomeDisp}`, textBody, htmlBody);
     }
   },
 );
+
 // ==================================================================
-// HELPER: Gerador de Template HTML (Formatado com 2 casas)
+// HELPER: Gerador de Template HTML 
 // ==================================================================
 function generateEmailHtml(tipo, dados) {
     const isAlarm = tipo === 'ALARM_START';
@@ -389,9 +457,28 @@ function generateEmailHtml(tipo, dados) {
         ? 'O sistema detectou um desvio crítico nos seguintes parâmetros:'
         : 'O monitoramento indicou que os parâmetros voltaram à normalidade.';
     const labelColunaValor = isAlarm ? 'Leitura de Disparo' : 'Leitura Final';
+    
+    // Tratamento de Data Seguro
+    let dataDoEvento;
+    const rawDate = dados.startTime;
+    if (rawDate && typeof rawDate.toDate === 'function') {
+        dataDoEvento = rawDate.toDate(); 
+    } 
+    else if (rawDate) {
+        dataDoEvento = new Date(rawDate);
+    } 
+    else {
+        dataDoEvento = new Date();
+    }
 
-    const dateOptions = { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
-    const dataHora = new Date().toLocaleString('pt-BR', dateOptions);
+    // Tratamento de Fuso
+    const fusoDoUsuario = dados.timeZone || 'America/Sao_Paulo';
+    
+    const dataHora = dataDoEvento.toLocaleString('pt-BR', {
+         timeZone: fusoDoUsuario,
+         day: '2-digit', month: '2-digit', year: 'numeric',
+         hour: '2-digit', minute: '2-digit'
+    });
 
     let duracaoHtml = '';
     if (!isAlarm && dados.duracao) {
@@ -452,7 +539,7 @@ function generateEmailHtml(tipo, dados) {
                     <p style="font-size: 16px; color: #333;">${msgPrincipal}</p>
                     
                     <div style="background-color: ${bgColor}; border-left: 5px solid ${color}; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                        <p style="margin: 5px 0;"><strong>🏢 Local:</strong> ${dados.instituicao} - ${dados.setor}</p>
+                        <p style="margin: 5px 0;"><strong>🏢 Local:</strong> ${dados.unidade} - ${dados.setor}</p>
                         <p style="margin: 5px 0;"><strong>📟 Dispositivo:</strong> ${dados.dispositivo}</p>
                         <p style="margin: 5px 0;"><strong>⚠️ Detalhe:</strong> ${dados.motivo}</p>
                         ${duracaoHtml}
