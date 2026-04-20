@@ -238,38 +238,33 @@ function renderDevicesGrid(devices) {
               
                <div class="icons-dashboard">
                 <div class="icon-item">
-                    <div class="icon-status" style="color:${cAlarmeSonda}" title="Alarme Sonda">
-                        <i class="fas fa-bell"></i>
-                    </div>
-                    <div class="icon-label">Sonda Ativa</div>
-                </div>
-               
-                <div class="icon-item">
                 <div class="icon-status" style="color:${cSonda}" title=" Sonda Física">
                     <i class="fas fa-thermometer-half"></i>
                 </div>
-                <div class="icon-label">Alarme T.Sonda</div>
+                <div class="icon-label">Sonda Ativa</div>
                </div>
+
+               <div class="icon-item">
+                    <div class="icon-status" style="color:${cAlarmeSonda}" title="Alarme Sonda">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="icon-label">Alarme T. Sonda</div>
+                </div>
+    
+                <div class="icon-item">
+                  <div class="icon-status" style="color:${cAlarmeAmb}" title="Alarme Ambiente">
+                    <i class="fas fa-temperature-low"></i>
+                  </div>
+                  <div class="icon-label">Alarme T. Ambiente</div>
+                </div>
                 
-   
-    
-    <div class="icon-item">
-      <div class="icon-status" style="color:${cAlarmeAmb}" title="Alarme Ambiente">
-        <i class="fas fa-temperature-low"></i>
-      </div>
-      <div class="icon-label">Alarme T. Ambiente</div>
-    </div>
-    
-    <div class="icon-item">
-      <div class="icon-status" style="color:${cAlarmeUmid}" title="Alarme Umidade">
-        <i class="fas fa-tint"></i>
-      </div>
-      <div class="icon-label">Alarme Umidade</div>
-    </div>
-  </div>
-
-
-
+                <div class="icon-item">
+                  <div class="icon-status" style="color:${cAlarmeUmid}" title="Alarme Umidade">
+                    <i class="fas fa-tint"></i>
+                  </div>
+                  <div class="icon-label">Alarme Umidade</div>
+                </div>
+              </div>
 
               <div class="device-footer">
                   <span class="status-pill ${statusColorClass}"><i class="fas fa-circle"></i> ${statusText}</span>
@@ -541,7 +536,8 @@ function setupViewEvents() {
       (d) =>
         d.nomeDispositivo?.toLowerCase().includes(t) ||
         d.id?.toLowerCase().includes(t) ||
-        d.nomeUnidade?.toLowerCase().includes(t),
+        d.nomeUnidade?.toLowerCase().includes(t) ||
+        d.nomeSetor?.toLowerCase().includes(t),
     );
     document.getElementById("devices-list-wrapper").innerHTML =
       renderDevicesGrid(f);
@@ -583,20 +579,59 @@ function setupViewEvents() {
   }
 }
 
+function parseNumberOrDefault(value, fallback) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (normalized === "") return fallback;
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 async function handleSave(existingId, closeCallback) {
   const mac = document.getElementById("mac").value.trim().toUpperCase();
-  if (!mac) return showNotification("MAC obrigatório.", "error");
+
+  if (!mac) {
+    return showNotification("MAC obrigatório.", "error");
+  }
+
+  if (!validateMacAddress(mac)) {
+    return showNotification(
+      "MAC inválido. Use o formato XX:XX:XX:XX:XX:XX.",
+      "error",
+    );
+  }
 
   const instSelect = document.getElementById("select-inst");
   const unitSelect = document.getElementById("select-unit");
   const setorSelect = document.getElementById("select-setor");
 
+  let existingData = {};
+  if (existingId) {
+    existingData = allDevices.find((d) => d.id === existingId) || {};
+  }
+
   const deviceData = {
-    nomeDispositivo: document.getElementById("nomeDispositivo").value,
+    nomeDispositivo: document.getElementById("nomeDispositivo").value.trim(),
     dispositivoAtivo: document.getElementById("dispositivoAtivo").checked,
     sondaAtiva: document.getElementById("sondaAtiva").checked,
 
-    // Checkboxes dentro do details
+    alarmeFalhaSondaAtivo: existingData.alarmeFalhaSondaAtivo ?? true,
+    alarmeFalhaTempAmbienteAtivo:
+      existingData.alarmeFalhaTempAmbienteAtivo ?? true,
+    alarmeFalhaUmidadeAtivo: existingData.alarmeFalhaUmidadeAtivo ?? true,
+
+    intervaloEnvio: existingData.intervaloEnvio ?? 300,
+    timeoutFalhaSensor: existingData.timeoutFalhaSensor ?? 300,
+    millisToReload: existingData.millisToReload ?? 172800000,
+    needsChatIdsUpdate: existingData.needsChatIdsUpdate ?? false,
+    forceReset: existingData.forceReset ?? false,
+    usuariosChatId: Array.isArray(existingData.usuariosChatId)
+      ? existingData.usuariosChatId
+      : [],
+
+    mac,
+    isOffline: existingData.isOffline ?? false,
+
     alarmeSondaAtivo: document.getElementById("alarmeSondaAtivo").checked,
     alarmeTempAmbienteAtivo: document.getElementById("alarmeTempAmbienteAtivo")
       .checked,
@@ -610,27 +645,79 @@ async function handleSave(existingId, closeCallback) {
     nomeSetor: setorSelect.options[setorSelect.selectedIndex]?.text || "",
 
     alarmeMin: {
-      sonda: parseFloat(document.getElementById("alarmeMin").value) || null,
-      temperaturaAmbiente:
-        parseFloat(document.getElementById("alarmeMinAmb").value) || null,
-      umidade:
-        parseFloat(document.getElementById("alarmeMinUmid").value) || null,
+      sonda: parseNumberOrDefault(
+        document.getElementById("alarmeMin").value,
+        15,
+      ),
+      temperaturaAmbiente: parseNumberOrDefault(
+        document.getElementById("alarmeMinAmb").value,
+        18,
+      ),
+      umidade: parseNumberOrDefault(
+        document.getElementById("alarmeMinUmid").value,
+        40,
+      ),
     },
     alarmeMax: {
-      sonda: parseFloat(document.getElementById("alarmeMax").value) || null,
-      temperaturaAmbiente:
-        parseFloat(document.getElementById("alarmeMaxAmb").value) || null,
-      umidade:
-        parseFloat(document.getElementById("alarmeMaxUmid").value) || null,
+      sonda: parseNumberOrDefault(
+        document.getElementById("alarmeMax").value,
+        35,
+      ),
+      temperaturaAmbiente: parseNumberOrDefault(
+        document.getElementById("alarmeMaxAmb").value,
+        24,
+      ),
+      umidade: parseNumberOrDefault(
+        document.getElementById("alarmeMaxUmid").value,
+        60,
+      ),
     },
   };
+
+  if (!deviceData.nomeDispositivo) {
+    return showNotification("Nome do dispositivo é obrigatório.", "error");
+  }
+
+  if (!deviceData.instituicaoID || !deviceData.unidadeID || !deviceData.setorID) {
+    return showNotification(
+      "Instituição, unidade e setor são obrigatórios.",
+      "error",
+    );
+  }
+
+  if (deviceData.alarmeMin.sonda > deviceData.alarmeMax.sonda) {
+    return showNotification(
+      "Limites da sonda inválidos: mínimo maior que máximo.",
+      "error",
+    );
+  }
+
+  if (
+    deviceData.alarmeMin.temperaturaAmbiente >
+    deviceData.alarmeMax.temperaturaAmbiente
+  ) {
+    return showNotification(
+      "Limites da temperatura ambiente inválidos: mínimo maior que máximo.",
+      "error",
+    );
+  }
+
+  if (deviceData.alarmeMin.umidade > deviceData.alarmeMax.umidade) {
+    return showNotification(
+      "Limites da umidade inválidos: mínimo maior que máximo.",
+      "error",
+    );
+  }
 
   try {
     const finalId = existingId || mac;
     const docRef = doc(db, "dispositivos", finalId);
+
     if (!existingId) {
-      if ((await getDoc(docRef)).exists())
+      if ((await getDoc(docRef)).exists()) {
         throw new Error("MAC já cadastrado.");
+      }
+
       deviceData.statusTimestamp = Timestamp.now();
       await setDoc(docRef, deviceData);
       showNotification("Criado!", "success");
@@ -639,6 +726,7 @@ async function handleSave(existingId, closeCallback) {
       await updateDoc(docRef, { forceReset: true });
       showNotification("Atualizado!", "success");
     }
+
     closeCallback();
     loadDevices();
   } catch (error) {
@@ -669,11 +757,15 @@ function setupSearchClear() {
   });
 }
 
-export function cleanupUserManagement() {
+function validateMacAddress(mac) {
+  return /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(mac);
+}
+
+export function cleanupDeviceManagement() {
   // Limpa apenas o filtro local quando sair da página
-  userManagementFilter = null;
+  deviceManagementFilter = null;
   console.log("Filtro de gerenciamento de usuários limpo");
 }
 
 // Limpa ao sair da página
-window.addEventListener("beforeunload", cleanupUserManagement);
+window.addEventListener("beforeunload", cleanupDeviceManagement);
