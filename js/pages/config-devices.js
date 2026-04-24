@@ -239,14 +239,14 @@ function renderDevicesGrid(devices) {
                <div class="icons-dashboard">
                 <div class="icon-item">
                 <div class="icon-status" style="color:${cSonda}" title=" Sonda Física">
-                    <i class="fas fa-thermometer-half"></i>
+                    <i class="fas fa-bell"></i>
                 </div>
                 <div class="icon-label">Sonda Ativa</div>
                </div>
 
                <div class="icon-item">
                     <div class="icon-status" style="color:${cAlarmeSonda}" title="Alarme Sonda">
-                        <i class="fas fa-bell"></i>
+                        <i class="fas fa-thermometer-half"></i>
                     </div>
                     <div class="icon-label">Alarme T. Sonda</div>
                 </div>
