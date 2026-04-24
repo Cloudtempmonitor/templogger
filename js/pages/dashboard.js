@@ -28,7 +28,7 @@ let deviceListeners = {};
 let alarmListeners = {};
 let activeAlarms = new Set();
 let lastValidReadings = {};
-const OFFLINE_THRESHOLD_SECONDS = 200;
+const OFFLINE_THRESHOLD_SECONDS = 90;
 let deferredPrompt = null;
 let installButton = null;
 let isSilentReconnecting = false;
@@ -76,7 +76,7 @@ async function initDashboard() {
   const uiTree = await buildUiTree(institution.id);
   renderDashboard(uiTree);
 
-  statusIntervalId = setInterval(checkAllDeviceStatus, 60000);
+  statusIntervalId = setInterval(checkAllDeviceStatus, 10000);
   checkAllDeviceStatus();
 }
 
@@ -146,7 +146,7 @@ async function buildUiTree(instId) {
       ...data,
     });
 
-    allDevicesConfig[doc.id] = data;
+    allDevicesConfig[doc.id] = { mac: doc.id, ...data };
   });
 
   for (const unitDoc of unitsSnapshot.docs) {
@@ -286,25 +286,33 @@ function checkDeviceStatus(mac) {
 
   const config = allDevicesConfig[mac];
   const statusTimestamp = config?.statusTimestamp;
-  if (!config || !statusTimestamp) {
+
+  if (!config || !statusTimestamp || typeof statusTimestamp.toMillis !== "function") {
     deviceStatus[mac] = "OFFLINE";
-    return;
+  } else {
+    try {
+      const nowMillis = Date.now();
+      const statusTimestampMillis = statusTimestamp.toMillis();
+      const differenceMillis = nowMillis - statusTimestampMillis;
+
+      deviceStatus[mac] =
+        differenceMillis > OFFLINE_THRESHOLD_SECONDS * 1000
+          ? "OFFLINE"
+          : "ONLINE";
+    } catch (e) {
+      console.warn(`Erro ao verificar status do MAC ${mac}:`, e);
+      deviceStatus[mac] = "OFFLINE";
+    }
   }
 
-  try {
-    const nowMillis = Date.now();
-    const statusTimestampMillis = statusTimestamp.toMillis();
-    const differenceMillis = nowMillis - statusTimestampMillis;
-    deviceStatus[mac] =
-      differenceMillis > OFFLINE_THRESHOLD_SECONDS * 1000
-        ? "OFFLINE"
-        : "ONLINE";
-    if (deviceCards[mac]) updateCardContent(deviceCards[mac], mac);
-  } catch (e) {
-    console.warn(`Erro ao verificar status do MAC ${mac}:`, e);
-    deviceStatus[mac] = "OFFLINE";
+  if (deviceCards[mac]) {
+    updateCardContent(deviceCards[mac], mac);
   }
 }
+
+
+
+
 
 
 function checkAllDeviceStatus() {
@@ -316,37 +324,45 @@ function checkAllDeviceStatus() {
 
 //Função que atualiza o conteúdo de cada card.
 function updateCardContent(cardElement, mac) {
-  const deviceConfig = allDevicesConfig[mac];
+  const deviceConfig = allDevicesConfig[mac] || {};
   const currentReading = deviceConfig.ultimasLeituras;
   const status = deviceStatus[mac] || "OFFLINE";
 
+
+  const isStandby = deviceConfig.dispositivoAtivo === false;
+
   const alarm = deviceAlarmStatus[mac] || { ativo: false, tipo: "Nenhum" };
-  const isAlarm = alarm.ativo === true;
+  const isAlarm = !isStandby && alarm.ativo === true;
+
+  const effectiveStatus = status;
 
   const isSondaAtiva = deviceConfig.sondaAtiva === true;
+
   let mainValue = "N/A";
   let ambientTempValue = "N/A";
   let humidityValue = "N/A";
-  let timestampText = "Sem dados";
   let mainColor = "#000000";
-  let alarmeMinDisplay = "N/A";
-  let alarmeMaxDisplay = "N/A";
   let mainLabelText = isSondaAtiva
     ? "🌡️ Sonda Externa"
     : "🏠 Temperatura Ambiente";
   let dataTexto = "--/--/----";
   let horaTexto = "--:--";
 
-  if (isAlarm) {
-    mainColor = "#e74c3c"; 
+  if (isStandby) {
+    mainColor = "#64748b";
+    mainLabelText = "⏸️ Dispositivo em Standby";
+    mainValue = "Standby";
+  } else if (isAlarm) {
+    mainColor = "#e74c3c";
   } else if (status !== "ONLINE") {
-    mainColor = "#95a5a6"; 
+    mainColor = "#95a5a6";
   }
 
   cardElement.classList.toggle("in-alarm", isAlarm);
-  
+  cardElement.classList.toggle("in-standby", isStandby);
 
   if (
+    !isStandby &&
     status === "ONLINE" &&
     currentReading &&
     typeof currentReading === "object"
@@ -355,29 +371,26 @@ function updateCardContent(cardElement, mac) {
     const tempAmb = currentReading.temperaturaAmbiente;
     const umidade = currentReading.umidade;
 
-    if (tempAmb !== undefined && tempAmb > -50)
+    if (tempAmb !== undefined && tempAmb > -50) {
       ambientTempValue = `${tempAmb.toFixed(1)}°C`;
-    if (umidade !== undefined)
+    }
+
+    if (umidade !== undefined) {
       humidityValue = `${parseFloat(umidade).toFixed(1)}%`;
+    }
 
     if (isSondaAtiva) {
-      const minAlarm = deviceConfig.alarmeMin?.sonda;
-      const maxAlarm = deviceConfig.alarmeMax?.sonda;
-      alarmeMinDisplay = minAlarm !== undefined ? `${minAlarm}°C` : "N/A";
-      alarmeMaxDisplay = maxAlarm !== undefined ? `${maxAlarm}°C` : "N/A";
-      if (tempSonda !== undefined)
+      if (tempSonda !== undefined) {
         mainValue = tempSonda <= -100 ? "N/A" : `${tempSonda.toFixed(1)}°C`;
+      }
     } else {
-      const minAlarmAmb = deviceConfig.alarmeMin?.temperaturaAmbiente;
-      const maxAlarmAmb = deviceConfig.alarmeMax?.temperaturaAmbiente;
-      alarmeMinDisplay = minAlarmAmb !== undefined ? `${minAlarmAmb}°C` : "N/A";
-      alarmeMaxDisplay = maxAlarmAmb !== undefined ? `${maxAlarmAmb}°C` : "N/A";
-      if (tempAmb !== undefined)
+      if (tempAmb !== undefined) {
         mainValue = tempAmb <= -100 ? "N/A" : `${tempAmb.toFixed(1)}°C`;
+      }
 
-      if (umidade !== undefined)
-        humidityValue =
-          umidade < 0 ? "N/A" : `${parseFloat(umidade).toFixed(1)}%`;
+      if (umidade !== undefined) {
+        humidityValue = umidade < 0 ? "N/A" : `${parseFloat(umidade).toFixed(1)}%`;
+      }
     }
 
     const timestamp = currentReading.timestamp;
@@ -386,33 +399,29 @@ function updateCardContent(cardElement, mac) {
       dataTexto = date.toLocaleDateString("pt-BR");
       horaTexto = date.toLocaleTimeString("pt-BR");
     }
-  } else {
-    mainColor = "#95a5a6";
-    if (
-      currentReading?.timestamp &&
-      typeof currentReading.timestamp.toDate === "function"
-    ) {
-      const date = currentReading.timestamp.toDate();
-      dataTexto = date.toLocaleDateString("pt-BR");
-      horaTexto = date.toLocaleTimeString("pt-BR");
-    }
-
-    const badgeEl = cardElement.querySelector(".status-badge");
-    if (badgeEl) {
-      badgeEl.style.backgroundColor = "";
-      badgeEl.style.color = "";
-
-      badgeEl.className = `status-badge status-${status.toLowerCase()}`;
-      badgeEl.textContent = status;
-    }
+  } else if (
+    currentReading?.timestamp &&
+    typeof currentReading.timestamp.toDate === "function"
+  ) {
+    const date = currentReading.timestamp.toDate();
+    dataTexto = date.toLocaleDateString("pt-BR");
+    horaTexto = date.toLocaleTimeString("pt-BR");
   }
 
-  const setorDisplay = deviceConfig.nomeSetor || "N/A";
   const nomeDispositivoDisplay =
     deviceConfig.nomeDispositivo || "Dispositivo Desconhecido";
 
-  const additionalDataHTML = isSondaAtiva
+  const additionalDataHTML = isStandby
     ? `
+        <div class="additional-data single-item">
+          <div class="data-item">
+            <div class="data-label">Modo</div>
+            <div class="data-value">Sem leituras</div>
+          </div>
+        </div>
+      `
+    : isSondaAtiva
+      ? `
         <div class="additional-data">
           <div class="data-item">
             <div class="data-label">T.Ambiente</div>
@@ -424,7 +433,7 @@ function updateCardContent(cardElement, mac) {
           </div>
         </div>
       `
-    : `
+      : `
         <div class="additional-data single-item">
           <div class="data-item">
             <div class="data-label">Umidade</div>
@@ -432,31 +441,36 @@ function updateCardContent(cardElement, mac) {
           </div>
         </div>
       `;
+const standbyBadgeHTML = isStandby
+  ? `<div class="device-standby-badge">STANDBY</div>`
+  : "";
 
   cardElement.innerHTML = `
-    <div class="device-name">${nomeDispositivoDisplay}</div>
-    <div class="device-header" style="font-weight: bold; color: ${
-      isSondaAtiva ? "var(--cor-texto-cinza)" : "#3498db"
-    };">
-      ${mainLabelText}
-    </div>
-    <div class="main-temperature" style="color: ${mainColor};">${mainValue}</div>
+  <div class="device-name">${nomeDispositivoDisplay}</div>
+  ${standbyBadgeHTML}
+  <div class="device-header" style="font-weight: bold; color: ${
+    isStandby ? "#64748b" : isSondaAtiva ? "var(--cor-texto-cinza)" : "#3498db"
+  };">
+    ${mainLabelText}
+  </div>
+  <div class="main-temperature" style="color: ${mainColor};">${mainValue}</div>
 
-    ${additionalDataHTML}
-    <div class="timestamp">
+  ${additionalDataHTML}
+  <div class="timestamp">
     <div class="status-badge status-${status.toLowerCase()}">${status}</div>
-  <span class="datetime">
-    <span class="date">${dataTexto}</span>
-    <span class="time">${horaTexto}</span>
-  </span>
-</div>
-  
-  `;
+    <span class="datetime">
+      <span class="date">${dataTexto}</span>
+      <span class="time">${horaTexto}</span>
+    </span>
+  </div>
+`;
+
 
   cardElement.onclick = () => {
     openDeviceDetails(deviceConfig);
   };
 }
+
 
 function clearAllListeners() {
   Object.values(deviceListeners).forEach((unsub) => unsub && unsub());
@@ -738,3 +752,5 @@ function updateAllCards() {
     }
   }
 }
+
+

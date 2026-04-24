@@ -231,3 +231,14 @@ margin-bottom: 40px;
   background: #f39c12 !important;
   color: white !important;
 }
+
+
+.status-badge.status-standby {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.device-container.in-standby {
+  opacity: 0.92;
+  border: 1px solid #cbd5e1;
+}
