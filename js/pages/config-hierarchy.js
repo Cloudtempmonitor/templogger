@@ -6,19 +6,25 @@
 
 import { db } from "../services/firebase.js";
 import {
-    collection,
-    doc,
-    setDoc,
-    updateDoc,
-    deleteDoc,
-    serverTimestamp
+  collection,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Importações do Sistema
-import { buscarDadosCep, getEstadoOptions } from "../services/address.service.js";
+import {
+  buscarDadosCep,
+  getEstadoOptions,
+} from "../services/address.service.js";
 import { getUser, getActiveInstitution } from "../core/state.js";
 import { hasRole, ROLES, permissions } from "../core/permissions.js";
-import { loadHierarchyCache, getCachedHierarchy } from "../services/hierarchy.service.js";
+import {
+  loadHierarchyCache,
+  getCachedHierarchy,
+} from "../services/hierarchy.service.js";
 import { showNotification, showConfirmation } from "../ui/notifications.js";
 import { hasLinkedDevices } from "../services/devices.service.js";
 
@@ -26,51 +32,48 @@ import { hasLinkedDevices } from "../services/devices.service.js";
 let hierarchyCache = null;
 let currentSelectedInstId = null;
 let currentSelectedUnitId = null;
+let currentSelectedSetorId = null;
 const contentArea = document.getElementById("admin-content-area");
 const loadingEl = document.getElementById("hierarchy-loading");
 const contentEl = document.getElementById("hierarchy-content");
 
-
-
 document.addEventListener("DOMContentLoaded", () => {
-    const user = getUser();
-    if (user) {
-        adminHierarchy();
-    } else {
-        window.addEventListener("userReady", () => {
-            adminHierarchy();
-        });
-    }
+  const user = getUser();
+  if (user) {
+    adminHierarchy();
+  } else {
+    window.addEventListener("userReady", () => {
+      adminHierarchy();
+    });
+  }
 });
 
-
 export async function adminHierarchy() {
-    try {
-        console.log("Iniciando adminHierarchy...");
-        
-        if (loadingEl) loadingEl.style.display = "block";
-        if (contentEl) contentEl.style.display = "none";
-        
-        await loadHierarchyCache();
-        hierarchyCache = getCachedHierarchy();
-        
-        checkAndUpdateSelection();
-        
-        await showHierarchyView();
-        
-        setupTableListeners();
-        
-        if (loadingEl) loadingEl.style.display = "none";
-        if (contentEl) contentEl.style.display = "block";
-        
-        console.log("adminHierarchy concluído com sucesso");
-        
-    } catch (error) {
-        console.error("Erro em adminHierarchy:", error);
-        
-        // Mostra erro no próprio elemento de loading
-        if (loadingEl) {
-            loadingEl.innerHTML = `
+  try {
+    console.log("Iniciando adminHierarchy...");
+
+    if (loadingEl) loadingEl.style.display = "block";
+    if (contentEl) contentEl.style.display = "none";
+
+    await loadHierarchyCache();
+    hierarchyCache = getCachedHierarchy();
+
+    checkAndUpdateSelection();
+
+    await showHierarchyView();
+
+    setupTableListeners();
+
+    if (loadingEl) loadingEl.style.display = "none";
+    if (contentEl) contentEl.style.display = "block";
+
+    console.log("adminHierarchy concluído com sucesso");
+  } catch (error) {
+    console.error("Erro em adminHierarchy:", error);
+
+    // Mostra erro no próprio elemento de loading
+    if (loadingEl) {
+      loadingEl.innerHTML = `
                 <p style="color:#dc2626; font-size:1rem; margin-bottom:15px;">
                     ❌ Erro ao carregar hierarquia
                 </p>
@@ -81,10 +84,10 @@ export async function adminHierarchy() {
                     Tentar novamente
                 </button>
             `;
-        }
-        
-        showNotification("Falha ao carregar estrutura hierárquica", "error");
     }
+
+    showNotification("Falha ao carregar estrutura hierárquica", "error");
+  }
 }
 
 /* ==========================================================================
@@ -92,40 +95,44 @@ export async function adminHierarchy() {
    ========================================================================== */
 
 async function showHierarchyView() {
-    const currentUser = getUser();
-    if (!currentUser) return;
-    
-    // Atualiza título
-    const adminTitle = document.getElementById("admin-title");
-    if (adminTitle) {
-        adminTitle.textContent = "Gerenciar Hierarquia";
-    }
-    
-    // Reset seleções
-    currentSelectedInstId = null;
-    currentSelectedUnitId = null;
-    
-    // Botão principal (apenas para superAdmin)
-    let mainButtonHtml = '';
-    if (hasRole(ROLES.SUPER_ADMIN)) {
-        mainButtonHtml = `
+  const currentUser = getUser();
+  if (!currentUser) return;
+
+  // Atualiza título
+  const adminTitle = document.getElementById("admin-title");
+  if (adminTitle) {
+    adminTitle.textContent = "Gerenciar Hierarquia";
+  }
+
+  // Reset seleções
+  currentSelectedInstId = null;
+  currentSelectedUnitId = null;
+  currentSelectedSetorId = null;
+
+  // Botão principal (apenas para superAdmin)
+  let mainButtonHtml = "";
+  if (hasRole(ROLES.SUPER_ADMIN)) {
+    mainButtonHtml = `
             <div class="hierarchy-actions">
                 <button id="add-new-inst-main" class="admin-button-new">
                     <i class="fas fa-plus"></i> Nova Instituição
                 </button>
             </div>
         `;
-    }
-    
-   contentArea.innerHTML = mainButtonHtml + `
+  }
+
+  contentArea.innerHTML =
+    mainButtonHtml +
+    `
     <div class="hierarchy-columns-container">
-        <!-- Coluna 1: Instituições -->
         <div class="hierarchy-column" id="col-instituicoes">
             <div class="column-header">
                 <h3><i class="fas fa-hospital"></i> Instituições</h3>
-                ${hasRole(ROLES.SUPER_ADMIN) ? 
-                    '<button id="add-new-inst" class="btn-icon-small" title="Adicionar instituição"><i class="fas fa-plus"></i></button>' : 
-                    ''}
+                ${
+                  hasRole(ROLES.SUPER_ADMIN)
+                    ? '<button id="add-new-inst" class="btn-icon-small" title="Adicionar instituição"><i class="fas fa-plus"></i></button>'
+                    : ""
+                }
             </div>
             <div class="column-content">
                 <ul id="inst-list" class="hierarchy-list"></ul>
@@ -134,14 +141,15 @@ async function showHierarchyView() {
                 <span id="inst-count">Carregando...</span>
             </div>
         </div>
-        
-        <!-- Coluna 2: Unidades -->
+
         <div class="hierarchy-column" id="col-unidades">
             <div class="column-header">
                 <h3><i class="fas fa-building"></i> Unidades</h3>
-                ${hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN) ? 
-                    '<button id="add-new-unit" class="btn-icon-small" title="Adicionar unidade"><i class="fas fa-plus"></i></button>' : 
-                    ''}
+                ${
+                  hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN)
+                    ? '<button id="add-new-unit" class="btn-icon-small" title="Adicionar unidade"><i class="fas fa-plus"></i></button>'
+                    : ""
+                }
             </div>
             <div class="column-content">
                 <ul id="unit-list" class="hierarchy-list"></ul>
@@ -150,14 +158,15 @@ async function showHierarchyView() {
                 <span id="unit-count">Selecione uma instituição</span>
             </div>
         </div>
-        
-        <!-- Coluna 3: Setores -->
+
         <div class="hierarchy-column" id="col-setores">
             <div class="column-header">
                 <h3><i class="fas fa-door-closed"></i> Setores</h3>
-                ${hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN) ? 
-                    '<button id="add-new-setor" class="btn-icon-small" title="Adicionar setor"><i class="fas fa-plus"></i></button>' : 
-                    ''}
+                ${
+                  hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN)
+                    ? '<button id="add-new-setor" class="btn-icon-small" title="Adicionar setor"><i class="fas fa-plus"></i></button>'
+                    : ""
+                }
             </div>
             <div class="column-content">
                 <ul id="setor-list" class="hierarchy-list"></ul>
@@ -166,470 +175,629 @@ async function showHierarchyView() {
                 <span id="setor-count">Selecione uma unidade</span>
             </div>
         </div>
+
+        <div class="hierarchy-column" id="col-locais">
+            <div class="column-header">
+                <h3><i class="fas fa-map-marker-alt"></i> Locais</h3>
+                ${
+                  hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN)
+                    ? '<button id="add-new-local" class="btn-icon-small" title="Adicionar local"><i class="fas fa-plus"></i></button>'
+                    : ""
+                }
+            </div>
+            <div class="column-content">
+                <ul id="local-list" class="hierarchy-list"></ul>
+            </div>
+            <div class="column-footer">
+                <span id="local-count">Selecione um setor</span>
+            </div>
+        </div>
     </div>
-    
+
     <div class="hierarchy-info">
-        <p><i class="fas fa-info-circle"></i> Clique em uma instituição para ver suas unidades. Clique em uma unidade para ver seus setores.</p>
+        <p><i class="fas fa-info-circle"></i> Clique em uma instituição para ver suas unidades, em uma unidade para ver seus setores e em um setor para ver seus locais.</p>
     </div>
 `;
-    
-    // Renderiza instituições
-    renderInstituicoes();
+
+  // Renderiza instituições
+  renderInstituicoes();
 }
 
 /* ==========================================================================
    RENDERIZAÇÃO DAS LISTAS
    ========================================================================== */
 function renderInstituicoes() {
-    const list = document.getElementById("inst-list");
-    const countEl = document.getElementById("inst-count");
-    const btnAdd = document.getElementById("add-new-inst") || document.getElementById("btn-add-inst"); 
+  const list = document.getElementById("inst-list");
+  const countEl = document.getElementById("inst-count");
+  const btnAdd =
+    document.getElementById("add-new-inst") ||
+    document.getElementById("btn-add-inst");
 
-    if (!list || !countEl) return;
+  if (!list || !countEl) return;
 
-    list.innerHTML = "";
+  list.innerHTML = "";
 
-    const currentUser = getUser();
-    const activeInst = getActiveInstitution(); 
+  const currentUser = getUser();
+  const activeInst = getActiveInstitution();
 
-    if (!currentUser) return;
+  if (!currentUser) return;
 
-    // ============================================================
-    // LÓGICA DE FILTRAGEM
-    // ============================================================
-    let instituicoesPermitidas = [];
-    
-    if (hasRole(ROLES.SUPER_ADMIN)) {
-        // SuperAdmin vê tudo
-        instituicoesPermitidas = hierarchyCache.instituicoes || [];
-        
-        // Habilita botão de adicionar
-        if (btnAdd) btnAdd.style.display = "flex"; 
-    } else {
-        // Admin vê APENAS a instituição ativa no momento
-        if (activeInst && activeInst.id) {
-            instituicoesPermitidas = (hierarchyCache.instituicoes || []).filter(inst => 
-                inst.id === activeInst.id
-            );
-        }
-        
-        // Esconde botão de adicionar para não-SuperAdmin
-        if (btnAdd) btnAdd.style.display = "none";
+  // ============================================================
+  // LÓGICA DE FILTRAGEM
+  // ============================================================
+  let instituicoesPermitidas = [];
+
+  if (hasRole(ROLES.SUPER_ADMIN)) {
+    // SuperAdmin vê tudo
+    instituicoesPermitidas = hierarchyCache.instituicoes || [];
+
+    // Habilita botão de adicionar
+    if (btnAdd) btnAdd.style.display = "flex";
+  } else {
+    // Admin vê APENAS a instituição ativa no momento
+    if (activeInst && activeInst.id) {
+      instituicoesPermitidas = (hierarchyCache.instituicoes || []).filter(
+        (inst) => inst.id === activeInst.id,
+      );
     }
 
-    // Atualiza contador
-    countEl.textContent = `${instituicoesPermitidas.length} instituição${instituicoesPermitidas.length !== 1 ? 's' : ''}`;
+    // Esconde botão de adicionar para não-SuperAdmin
+    if (btnAdd) btnAdd.style.display = "none";
+  }
 
-    // Se não houver instituições
-    if (instituicoesPermitidas.length === 0) {
-        list.innerHTML = `
+  // Atualiza contador
+  countEl.textContent = `${instituicoesPermitidas.length} instituição${instituicoesPermitidas.length !== 1 ? "s" : ""}`;
+
+  // Se não houver instituições
+  if (instituicoesPermitidas.length === 0) {
+    list.innerHTML = `
             <li class="empty-state">
                 <i class="fas fa-hospital"></i>
                 <p>Nenhuma instituição acessível</p>
             </li>
         `;
-        return;
+    return;
+  }
+
+  // ============================================================
+  // RENDERIZAÇÃO
+  // ============================================================
+  instituicoesPermitidas.forEach((inst) => {
+    const li = document.createElement("li");
+    li.dataset.id = inst.id;
+    li.dataset.instId = inst.id;
+
+    // Se for Admin (só tem 1 item), já deixa visualmente ativo
+    if (!hasRole(ROLES.SUPER_ADMIN) || currentSelectedInstId === inst.id) {
+      li.classList.add("active");
     }
 
-    // ============================================================
-    // RENDERIZAÇÃO
-    // ============================================================
-    instituicoesPermitidas.forEach(inst => {
-        const li = document.createElement("li");
-        li.dataset.id = inst.id;
-        li.dataset.instId = inst.id;
-
-        // Se for Admin (só tem 1 item), já deixa visualmente ativo
-        if (!hasRole(ROLES.SUPER_ADMIN) || currentSelectedInstId === inst.id) {
-             li.classList.add("active");
-        }
-
-        //Botões de ação apenas para SuperAdmin
-        const actionsHtml = hasRole(ROLES.SUPER_ADMIN) ? 
-            `<div class="item-actions">
+    //Botões de ação apenas para SuperAdmin
+    const actionsHtml = hasRole(ROLES.SUPER_ADMIN)
+      ? `<div class="item-actions">
                 <button class="edit-btn" data-id="${inst.id}" title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
                 <button class="delete-btn" data-id="${inst.id}" data-name="${inst.nome || inst.id}" title="Excluir">
                     <i class="fas fa-trash"></i>
                 </button>
-            </div>` : 
-            `<div class="item-actions"><span style="font-size:0.8em; color:#ccc;">(Atual)</span></div>`;
+            </div>`
+      : `<div class="item-actions"><span style="font-size:0.8em; color:#ccc;">(Atual)</span></div>`;
 
-        li.innerHTML = `
+    li.innerHTML = `
             <span class="item-text">${inst.nome || inst.id}</span>
             ${actionsHtml}
         `;
 
-        // ============================================================
-        // EVENTO DE CLIQUE 
-        // ============================================================
-        li.addEventListener("click", (e) => {
-            if (e.target.closest(".item-actions")) return;
+    // ============================================================
+    // EVENTO DE CLIQUE
+    // ============================================================
+    li.addEventListener("click", (e) => {
+      if (e.target.closest(".item-actions")) return;
 
-            // Remove active de todas as instituições
-            list.querySelectorAll("li").forEach(item => item.classList.remove("active"));
-            
-            // Remove active de todas as unidades
-            const unitList = document.getElementById("unit-list");
-            if (unitList) {
-                unitList.querySelectorAll("li").forEach(item => item.classList.remove("active"));
-            }
+      // Remove active de todas as instituições
+      list
+        .querySelectorAll("li")
+        .forEach((item) => item.classList.remove("active"));
 
-            // Ativa a instituição clicada
-            li.classList.add("active");
+      // Remove active de todas as unidades
+      const unitList = document.getElementById("unit-list");
+      if (unitList) {
+        unitList
+          .querySelectorAll("li")
+          .forEach((item) => item.classList.remove("active"));
+      }
 
-            // Atualiza seleção global
-            currentSelectedInstId = inst.id;
-            currentSelectedUnitId = null; 
+      // Ativa a instituição clicada
+      li.classList.add("active");
 
-            // Mostra botão de adicionar unidade 
-            const addUnitBtn = document.getElementById("add-new-unit");
-            if (addUnitBtn) {
-                addUnitBtn.style.display = "block"; 
-            }
+      // Atualiza seleção global
+      currentSelectedInstId = inst.id;
+      currentSelectedUnitId = null;
 
-            // Esconde botão de adicionar setor (pois resetou unidade)
-            const addSetorBtn = document.getElementById("add-new-setor");
-            if (addSetorBtn) addSetorBtn.style.display = "none";
+      // Mostra botão de adicionar unidade
+      const addUnitBtn = document.getElementById("add-new-unit");
+      if (addUnitBtn) {
+        addUnitBtn.style.display = "block";
+      }
 
-            // Limpa e renderiza unidades
-            renderUnidades(inst.id);
+      // Esconde botão de adicionar setor (pois resetou unidade)
+      const addSetorBtn = document.getElementById("add-new-setor");
+      if (addSetorBtn) addSetorBtn.style.display = "none";
 
-            // Limpa os setores explicitamente
-            renderSetores(null, true); 
-        });
+      // Limpa e renderiza unidades
+      renderUnidades(inst.id);
 
-        list.appendChild(li);
+      // Limpa os setores explicitamente
+      renderSetores(null, true);
+
+      currentSelectedSetorId = null;
+      renderLocais(null, true);
     });
 
-    if (instituicoesPermitidas.length === 1 && !currentSelectedInstId) {
-        const firstLi = list.querySelector("li");
-        if (firstLi) firstLi.click();
-    }
+    list.appendChild(li);
+  });
+
+  if (instituicoesPermitidas.length === 1 && !currentSelectedInstId) {
+    const firstLi = list.querySelector("li");
+    if (firstLi) firstLi.click();
+  }
 }
 
 function renderUnidades(instId) {
-    const list = document.getElementById("unit-list");
-    const countEl = document.getElementById("unit-count");
-    
-    if (!list || !countEl) return;
-    
-    list.innerHTML = "";
-    
-    // Filtra unidades da instituição selecionada
-    const unidadesDaInst = (hierarchyCache.unidades || []).filter(unit => 
-        unit.instituicaoId === instId
-    );
-    
-    // Atualiza contador
-    countEl.textContent = `${unidadesDaInst.length} unidade${unidadesDaInst.length !== 1 ? 's' : ''}`;
-    
-    // Se não houver unidades
-    if (unidadesDaInst.length === 0) {
-        list.innerHTML = `
+  const list = document.getElementById("unit-list");
+  const countEl = document.getElementById("unit-count");
+
+  if (!list || !countEl) return;
+
+  list.innerHTML = "";
+
+  // Filtra unidades da instituição selecionada
+  const unidadesDaInst = (hierarchyCache.unidades || []).filter(
+    (unit) => unit.instituicaoId === instId,
+  );
+
+  // Atualiza contador
+  countEl.textContent = `${unidadesDaInst.length} unidade${unidadesDaInst.length !== 1 ? "s" : ""}`;
+
+  // Se não houver unidades
+  if (unidadesDaInst.length === 0) {
+    list.innerHTML = `
             <li class="empty-state">
                 <i class="fas fa-building"></i>
                 <p>Nenhuma unidade nesta instituição</p>
             </li>
         `;
-        
-        // Limpa setores (mostra mensagem de seleção)
-        renderSetores(null, true);
-        return;
-    }
-    
-    // Renderiza cada unidade
-    unidadesDaInst.forEach(unit => {
-        const li = document.createElement("li");
-        li.dataset.id = unit.id;
-        li.dataset.unitId = unit.id;
-        li.dataset.instId = unit.instituicaoId; // Armazena também a instituição
-        
-        li.innerHTML = `
+
+    // Limpa setores (mostra mensagem de seleção)
+    renderSetores(null, true);
+    return;
+  }
+
+  // Renderiza cada unidade
+  unidadesDaInst.forEach((unit) => {
+    const li = document.createElement("li");
+    li.dataset.id = unit.id;
+    li.dataset.unitId = unit.id;
+    li.dataset.instId = unit.instituicaoId; // Armazena também a instituição
+
+    li.innerHTML = `
             <span class="item-text">${unit.nome || unit.id}</span>
-            ${hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN) ? 
-                `<div class="item-actions">
+            ${
+              hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN)
+                ? `<div class="item-actions">
                     <button class="edit-btn" data-id="${unit.id}" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
                     <button class="delete-btn" data-id="${unit.id}" data-name="${unit.nome || unit.id}" title="Excluir">
                         <i class="fas fa-trash"></i>
                     </button>
-                </div>` : 
-                ''}
-        `;
-        
-        // Evento de clique na linha (seleção)
-        li.addEventListener("click", (e) => {
-            if (e.target.closest(".item-actions")) return;
-            
-            // Verifica se a unidade pertence à instituição selecionada
-            if (currentSelectedInstId && unit.instituicaoId !== currentSelectedInstId) {
-                showNotification("Esta unidade não pertence à instituição selecionada", "warning");
-                return;
+                </div>`
+                : ""
             }
-            
-            // Remove active de todas as unidades
-            list.querySelectorAll("li").forEach(item => item.classList.remove("active"));
-            
-            // Ativa a unidade clicada
-            li.classList.add("active");
-            
-            // Atualiza seleção
-            currentSelectedUnitId = unit.id;
-            
-            // Mostra botão de adicionar setor
-            const addSetorBtn = document.getElementById("add-new-setor");
-            if (addSetorBtn) addSetorBtn.style.display = "block";
-            
-            // Renderiza setores da unidade selecionada
-            renderSetores(unit.id, false);
-        });
-        
-        list.appendChild(li);
+        `;
+
+    // Evento de clique na linha (seleção)
+    li.addEventListener("click", (e) => {
+      if (e.target.closest(".item-actions")) return;
+
+      // Verifica se a unidade pertence à instituição selecionada
+      if (
+        currentSelectedInstId &&
+        unit.instituicaoId !== currentSelectedInstId
+      ) {
+        showNotification(
+          "Esta unidade não pertence à instituição selecionada",
+          "warning",
+        );
+        return;
+      }
+
+      // Remove active de todas as unidades
+      list
+        .querySelectorAll("li")
+        .forEach((item) => item.classList.remove("active"));
+
+      // Ativa a unidade clicada
+      li.classList.add("active");
+
+      // Atualiza seleção
+      currentSelectedUnitId = unit.id;
+
+      // Mostra botão de adicionar setor
+      const addSetorBtn = document.getElementById("add-new-setor");
+      if (addSetorBtn) addSetorBtn.style.display = "block";
+
+      // Renderiza setores da unidade selecionada
+      renderSetores(unit.id, false);
+
+      currentSelectedSetorId = null;
+      renderLocais(null, true);
     });
+
+    list.appendChild(li);
+  });
 }
 
 function renderSetores(unitId, forceClear = false) {
-    const list = document.getElementById("setor-list");
-    const countEl = document.getElementById("setor-count");
-    
-    if (!list || !countEl) return;
-    
-    list.innerHTML = "";
-    
-    // Se forceClear for true ou não houver unitId, mostra estado vazio
-    if (forceClear || !unitId) {
-        if (!currentSelectedUnitId) {
-            countEl.textContent = "Selecione uma unidade";
-            list.innerHTML = `
+  const list = document.getElementById("setor-list");
+  const countEl = document.getElementById("setor-count");
+
+  if (!list || !countEl) return;
+
+  list.innerHTML = "";
+
+  // Se forceClear for true ou não houver unitId, mostra estado vazio
+  if (forceClear || !unitId) {
+    if (!currentSelectedUnitId) {
+      renderLocais(null, true);
+      countEl.textContent = "Selecione uma unidade";
+      list.innerHTML = `
                 <li class="empty-state">
                     <i class="fas fa-door-closed"></i>
                     <p>Selecione uma unidade para ver os setores</p>
                 </li>
             `;
-        } else {
-            countEl.textContent = "0 setores";
-            list.innerHTML = `
+    } else {
+      countEl.textContent = "0 setores";
+      list.innerHTML = `
                 <li class="empty-state">
                     <i class="fas fa-door-closed"></i>
                     <p>Nenhum setor nesta unidade</p>
                 </li>
             `;
-        }
-        return;
     }
-    
-    // Filtra setores da unidade selecionada
-    const setoresDaUnidade = (hierarchyCache.setores || []).filter(setor => 
-        setor.unidadeId === unitId
-    );
-    
-    // Atualiza contador
-    countEl.textContent = `${setoresDaUnidade.length} setor${setoresDaUnidade.length !== 1 ? 'es' : ''}`;
-    
-    // Se não houver setores
-    if (setoresDaUnidade.length === 0) {
-        list.innerHTML = `
+    return;
+  }
+
+  // Filtra setores da unidade selecionada
+  const setoresDaUnidade = (hierarchyCache.setores || []).filter(
+    (setor) => setor.unidadeId === unitId,
+  );
+
+  // Atualiza contador
+  countEl.textContent = `${setoresDaUnidade.length} setor${setoresDaUnidade.length !== 1 ? "es" : ""}`;
+
+  // Se não houver setores
+  if (setoresDaUnidade.length === 0) {
+    list.innerHTML = `
             <li class="empty-state">
                 <i class="fas fa-door-closed"></i>
                 <p>Nenhum setor nesta unidade</p>
             </li>
         `;
-        return;
-    }
-    
-    // Renderiza cada setor
-    setoresDaUnidade.forEach(setor => {
-        const li = document.createElement("li");
-        li.dataset.id = setor.id;
-        
-        li.innerHTML = `
+    return;
+  }
+
+  // Renderiza cada setor
+  setoresDaUnidade.forEach((setor) => {
+    const li = document.createElement("li");
+    li.dataset.id = setor.id;
+
+    li.innerHTML = `
             <span class="item-text">${setor.nome || setor.id}</span>
-            ${hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN) ? 
-                `<div class="item-actions">
+            ${
+              hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN)
+                ? `<div class="item-actions">
                     <button class="edit-btn" data-id="${setor.id}" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
                     <button class="delete-btn" data-id="${setor.id}" data-name="${setor.nome || setor.id}" title="Excluir">
                         <i class="fas fa-trash"></i>
                     </button>
-                </div>` : 
-                ''}
+                </div>`
+                : ""
+            }
         `;
-        
-        // Evento de clique (não navega, pois setor é o último nível)
-        li.addEventListener("click", (e) => {
-            if (e.target.closest(".item-actions")) return;
-            
-            // Remove active dos irmãos
-            list.querySelectorAll("li").forEach(item => item.classList.remove("active"));
-            li.classList.add("active");
-        });
-        
-        list.appendChild(li);
+
+    li.addEventListener("click", (e) => {
+      if (e.target.closest(".item-actions")) return;
+
+      list
+        .querySelectorAll("li")
+        .forEach((item) => item.classList.remove("active"));
+      li.classList.add("active");
+
+      currentSelectedSetorId = setor.id;
+
+      const addLocalBtn = document.getElementById("add-new-local");
+      if (addLocalBtn) addLocalBtn.style.display = "block";
+
+      renderLocais(setor.id, false);
     });
+
+    list.appendChild(li);
+  });
 }
 
+function renderLocais(setorId, forceClear = false) {
+  const list = document.getElementById("local-list");
+  const countEl = document.getElementById("local-count");
+
+  if (!list || !countEl) return;
+
+  list.innerHTML = "";
+
+  if (forceClear || !setorId) {
+    countEl.textContent = "Selecione um setor";
+    list.innerHTML = `
+            <li class="empty-state">
+                <i class="fas fa-map-marker-alt"></i>
+                <p>Selecione um setor para ver os locais</p>
+            </li>
+        `;
+    return;
+  }
+
+  const locaisDoSetor = (hierarchyCache.locais || []).filter(
+    (local) => local.setorId === setorId,
+  );
+
+  countEl.textContent = `${locaisDoSetor.length} local${locaisDoSetor.length !== 1 ? "ais" : ""}`;
+
+  if (locaisDoSetor.length === 0) {
+    list.innerHTML = `
+            <li class="empty-state">
+                <i class="fas fa-map-marker-alt"></i>
+                <p>Nenhum local neste setor</p>
+            </li>
+        `;
+    return;
+  }
+
+  locaisDoSetor.forEach((local) => {
+    const li = document.createElement("li");
+    li.dataset.id = local.id;
+
+    li.innerHTML = `
+            <span class="item-text">${local.nome || local.id}</span>
+            ${
+              hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.ADMIN)
+                ? `<div class="item-actions">
+                    <button class="edit-btn" data-id="${local.id}" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="delete-btn" data-id="${local.id}" data-name="${local.nome || local.id}" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>`
+                : ""
+            }
+        `;
+
+    li.addEventListener("click", (e) => {
+      if (e.target.closest(".item-actions")) return;
+      list
+        .querySelectorAll("li")
+        .forEach((item) => item.classList.remove("active"));
+      li.classList.add("active");
+    });
+
+    list.appendChild(li);
+  });
+}
 
 /* ==========================================================================
    CONFIGURAÇÃO DE EVENT LISTENERS
    ========================================================================== */
 
-
 function setupTableListeners() {
-    if (contentArea.dataset.listenersAttached === "true") {
-        return; 
-    }
+  if (contentArea.dataset.listenersAttached === "true") {
+    return;
+  }
 
-    // Botão principal para nova instituição
-    const addNewInstMain = document.getElementById("add-new-inst-main");
-    if (addNewInstMain) {
-        addNewInstMain.addEventListener("click", () => openHierarchyModal("instituicao"));
-    }
-    
-    // Botões nas colunas
-    const addNewInst = document.getElementById("add-new-inst");
-    if (addNewInst) {
-        addNewInst.addEventListener("click", () => {
-            if (!hasRole(ROLES.SUPER_ADMIN)) {
-                showNotification("Apenas Super Admin pode adicionar instituições", "error");
-                return;
-            }
-            openHierarchyModal("instituicao");
-        });
-    }
-    
-    const addNewUnit = document.getElementById("add-new-unit");
-    if (addNewUnit) {
-        addNewUnit.addEventListener("click", () => {
-            if (!currentSelectedInstId) {
-                showNotification("Selecione uma instituição primeiro", "warning");
-                return;
-            }
-            openHierarchyModal("unidade");
-        });
-    }
-    
-    const addNewSetor = document.getElementById("add-new-setor");
-    if (addNewSetor) {
-        addNewSetor.addEventListener("click", () => {
-            if (!currentSelectedUnitId) {
-                showNotification("Selecione uma unidade primeiro", "warning");
-                return;
-            }
-            openHierarchyModal("setor");
-        });
-    }
-    
-    // Event delegation para botões de ação
-    contentArea.addEventListener("click", (e) => {
-        // Botões de edição
-        if (e.target.closest(".edit-btn")) {
-            const btn = e.target.closest(".edit-btn");
-            const id = btn.dataset.id;
-            const listItem = btn.closest("li");
-            
-            // Determina o tipo baseado na coluna
-            if (listItem.closest("#inst-list")) {
-                openHierarchyModal("instituicao", id);
-            } else if (listItem.closest("#unit-list")) {
-                openHierarchyModal("unidade", id);
-            } else if (listItem.closest("#setor-list")) {
-                openHierarchyModal("setor", id);
-            }
-        }
-        
-        // Botões de exclusão
-        if (e.target.closest(".delete-btn")) {
-            const btn = e.target.closest(".delete-btn");
-            const id = btn.dataset.id;
-            const name = btn.dataset.name;
-            const listItem = btn.closest("li");
-            
-            // Determina o tipo baseado na coluna
-            if (listItem.closest("#inst-list")) {
-                deleteHierarchyItem("instituicao", id, name);
-            } else if (listItem.closest("#unit-list")) {
-                deleteHierarchyItem("unidade", id, name);
-            } else if (listItem.closest("#setor-list")) {
-                deleteHierarchyItem("setor", id, name);
-            }
-        }
+  // Botão principal para nova instituição
+  const addNewInstMain = document.getElementById("add-new-inst-main");
+  if (addNewInstMain) {
+    addNewInstMain.addEventListener("click", () =>
+      openHierarchyModal("instituicao"),
+    );
+  }
+
+  // Botões nas colunas
+  const addNewInst = document.getElementById("add-new-inst");
+  if (addNewInst) {
+    addNewInst.addEventListener("click", () => {
+      if (!hasRole(ROLES.SUPER_ADMIN)) {
+        showNotification(
+          "Apenas Super Admin pode adicionar instituições",
+          "error",
+        );
+        return;
+      }
+      openHierarchyModal("instituicao");
     });
+  }
 
-    contentArea.dataset.listenersAttached = "true";
+  const addNewUnit = document.getElementById("add-new-unit");
+  if (addNewUnit) {
+    addNewUnit.addEventListener("click", () => {
+      if (!currentSelectedInstId) {
+        showNotification("Selecione uma instituição primeiro", "warning");
+        return;
+      }
+      openHierarchyModal("unidade");
+    });
+  }
+
+  const addNewSetor = document.getElementById("add-new-setor");
+  if (addNewSetor) {
+    addNewSetor.addEventListener("click", () => {
+      if (!currentSelectedUnitId) {
+        showNotification("Selecione uma unidade primeiro", "warning");
+        return;
+      }
+      openHierarchyModal("setor");
+    });
+  }
+
+  const addNewLocal = document.getElementById("add-new-local");
+  if (addNewLocal) {
+    addNewLocal.addEventListener("click", () => {
+      if (!currentSelectedSetorId) {
+        showNotification("Selecione um setor primeiro", "warning");
+        return;
+      }
+      openHierarchyModal("local");
+    });
+  } else if (listItem.closest("#local-list")) {
+    openHierarchyModal("local", id);
+  } else if (listItem.closest("#local-list")) {
+    deleteHierarchyItem("local", id, name);
+  }
+
+  // Event delegation para botões de ação
+contentArea.addEventListener("click", (e) => {
+    if (e.target.closest(".edit-btn")) {
+        const btn = e.target.closest(".edit-btn");
+        const id = btn.dataset.id;
+        const listItem = btn.closest("li");
+
+        if (listItem.closest("#inst-list")) {
+            openHierarchyModal("instituicao", id);
+        } else if (listItem.closest("#unit-list")) {
+            openHierarchyModal("unidade", id);
+        } else if (listItem.closest("#setor-list")) {
+            openHierarchyModal("setor", id);
+        } else if (listItem.closest("#local-list")) {
+            openHierarchyModal("local", id);
+        }
+    }
+
+    if (e.target.closest(".delete-btn")) {
+        const btn = e.target.closest(".delete-btn");
+        const id = btn.dataset.id;
+        const name = btn.dataset.name;
+        const listItem = btn.closest("li");
+
+        if (listItem.closest("#inst-list")) {
+            deleteHierarchyItem("instituicao", id, name);
+        } else if (listItem.closest("#unit-list")) {
+            deleteHierarchyItem("unidade", id, name);
+        } else if (listItem.closest("#setor-list")) {
+            deleteHierarchyItem("setor", id, name);
+        } else if (listItem.closest("#local-list")) {
+            deleteHierarchyItem("local", id, name);
+        }
+    }
+});
+
+
+  contentArea.dataset.listenersAttached = "true";
 }
-
 
 /* ==========================================================================
    MODAIS (CRUD)
    ========================================================================== */
 
 async function openHierarchyModal(type, docId = null) {
-    if (document.querySelector(".admin-modal-overlay")) {
-        return; 
-    }
+  if (document.querySelector(".admin-modal-overlay")) {
+    return;
+  }
 
-    const currentUser = getUser();
-    if (!currentUser) return;
-    
-    // Verifica permissões
-    if (type === "instituicao" && !hasRole(ROLES.SUPER_ADMIN)) {
-        showNotification("Apenas Super Admin pode gerenciar instituições", "error");
-        return;
-    }
-    
-    if ((type === "unidade" || type === "setor") && 
-        !hasRole(ROLES.SUPER_ADMIN) && !hasRole(ROLES.ADMIN)) {
-        showNotification("Apenas administradores podem gerenciar unidades e setores", "error");
-        return;
-    }
-    
-    // Validações de contexto
-    if (type === "unidade" && !currentSelectedInstId) {
-        showNotification("Selecione uma instituição antes de adicionar uma unidade", "warning");
-        return;
-    }
-    
-    if (type === "setor" && (!currentSelectedInstId || !currentSelectedUnitId)) {
-        showNotification("Selecione uma instituição e uma unidade antes de adicionar um setor", "warning");
-        return;
-    }
-    
-    // Carrega dados se for edição
-    let data = {};
-    let title = "";
-    
-    if (docId) {
-        // Voltamos para o switch case para garantir a busca correta
-        switch (type) {
-            case "instituicao":
-                data = (hierarchyCache.instituicoes || []).find(i => i.id === docId) || {};
-                title = "Editar Instituição";
-                break;
-            case "unidade":
-                data = (hierarchyCache.unidades || []).find(u => u.id === docId) || {};
-                title = "Editar Unidade";
-                break;
-            case "setor":
-                data = (hierarchyCache.setores || []).find(s => s.id === docId) || {};
-                title = "Editar Setor";
-                break;
-        }
-        console.log("Dados encontrados:", data); // DEBUG - Verifique se 'nome' e 'cnpj' aparecem aqui
-    } else {
-        // Títulos para novo cadastro
-        const titles = {
-            instituicao: "Nova Instituição",
-            unidade: "Nova Unidade",
-            setor: "Novo Setor"
-        };
-        title = titles[type];
-    }
+  const currentUser = getUser();
+  if (!currentUser) return;
 
-    const addressHtml = `
+  // Verifica permissões
+  if (type === "instituicao" && !hasRole(ROLES.SUPER_ADMIN)) {
+    showNotification("Apenas Super Admin pode gerenciar instituições", "error");
+    return;
+  }
+
+  if (
+    (type === "unidade" || type === "setor") &&
+    !hasRole(ROLES.SUPER_ADMIN) &&
+    !hasRole(ROLES.ADMIN)
+  ) {
+    showNotification(
+      "Apenas administradores podem gerenciar unidades e setores",
+      "error",
+    );
+    return;
+  }
+
+  // Validações de contexto
+  if (type === "unidade" && !currentSelectedInstId) {
+    showNotification(
+      "Selecione uma instituição antes de adicionar uma unidade",
+      "warning",
+    );
+    return;
+  }
+
+  if (type === "setor" && (!currentSelectedInstId || !currentSelectedUnitId)) {
+    showNotification(
+      "Selecione uma instituição e uma unidade antes de adicionar um setor",
+      "warning",
+    );
+    return;
+  }
+
+  // Carrega dados se for edição
+  let data = {};
+  let title = "";
+
+  if (docId) {
+    // Voltamos para o switch case para garantir a busca correta
+    switch (type) {
+      case "instituicao":
+        data =
+          (hierarchyCache.instituicoes || []).find((i) => i.id === docId) || {};
+        title = "Editar Instituição";
+        break;
+      case "unidade":
+        data =
+          (hierarchyCache.unidades || []).find((u) => u.id === docId) || {};
+        title = "Editar Unidade";
+        break;
+      case "setor":
+        data = (hierarchyCache.setores || []).find((s) => s.id === docId) || {};
+        title = "Editar Setor";
+        break;
+      case "local":
+        data = (hierarchyCache.locais || []).find((l) => l.id === docId) || {};
+        title = "Editar Local";
+
+        break;
+    }
+  } else {
+    // Títulos para novo cadastro
+    const titles = {
+      instituicao: "Nova Instituição",
+      unidade: "Nova Unidade",
+      setor: "Novo Setor",
+      local: "Novo Local",
+    };
+    title = titles[type];
+  }
+
+  if (type === "local" && docId) {
+    currentSelectedInstId = data.instituicaoId || currentSelectedInstId;
+    currentSelectedUnitId = data.unidadeId || currentSelectedUnitId;
+    currentSelectedSetorId = data.setorId || currentSelectedSetorId;
+  }
+  
+  const addressHtml = `
         <div class="form-section" style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e9ecef;">
             <h4 style="margin: 0 0 10px; font-size: 0.85rem; color: #6c757d; text-transform: uppercase;">Endereço / Localização</h4>
             
@@ -668,20 +836,20 @@ async function openHierarchyModal(type, docId = null) {
             </div>
         </div>
     `;
-    
-    // Campos específicos por tipo
-    let extraFields = "";
-    
-    if (type === "instituicao") {
-        extraFields = `
+
+  // Campos específicos por tipo
+  let extraFields = "";
+
+  if (type === "instituicao") {
+    extraFields = `
             <div class="form-group">
                 <label for="cnpj">CNPJ (opcional)</label>
                 <input type="text" id="cnpj" value="${data.cnpj || ""}" class="form-control" placeholder="00.000.000/0000-00">
             </div>
             ${addressHtml}
         `;
-    } else if (type === "unidade") {
-        extraFields = `
+  } else if (type === "unidade") {
+    extraFields = `
             <div class="form-group">
                 <label>Instituição vinculada</label>
                 <input type="text" value="${getInstituicaoNome(currentSelectedInstId)}" class="form-control" disabled>
@@ -694,8 +862,8 @@ async function openHierarchyModal(type, docId = null) {
             <h4 style="margin: 15px 0 10px; font-size: 0.9em; text-transform: uppercase; color: #666; border-bottom: 1px solid #eee; padding-bottom: 5px;">Localização Física</h4>
             ${addressHtml}
         `;
-    } else if (type === "setor") {
-        extraFields = `
+  } else if (type === "setor") {
+    extraFields = `
              <div class="form-group">
                 <label>Unidade vinculada</label>
                 <input type="text" value="${getUnidadeNome(currentSelectedUnitId)}" class="form-control" disabled>
@@ -706,13 +874,56 @@ async function openHierarchyModal(type, docId = null) {
                 <input type="text" value="${getInstituicaoNome(currentSelectedInstId)}" class="form-control" disabled>
             </div>
         `;
-    }
-    
-    // Cria modal
-    const modalOverlay = document.createElement("div");
-    modalOverlay.className = "admin-modal-overlay";
+  } else if (type === "local") {
+    const setorNome =
+      (hierarchyCache.setores || []).find(
+        (s) => s.id === currentSelectedSetorId,
+      )?.nome ||
+      data.nomeSetor ||
+      "Não encontrado";
 
-   modalOverlay.innerHTML = `
+    const unidadeNome =
+      (hierarchyCache.unidades || []).find(
+        (u) => u.id === currentSelectedUnitId,
+      )?.nome ||
+      data.nomeUnidade ||
+      "Não encontrado";
+
+    const instituicaoNome =
+      (hierarchyCache.instituicoes || []).find(
+        (i) => i.id === currentSelectedInstId,
+      )?.nome ||
+      data.nomeInstituicao ||
+      "Não encontrada";
+
+    extraFields = `
+        <div class="form-group">
+            <label>Instituição</label>
+            <input type="text" value="${instituicaoNome}" class="form-control" disabled>
+        </div>
+        <div class="form-group">
+            <label>Unidade</label>
+            <input type="text" value="${unidadeNome}" class="form-control" disabled>
+        </div>
+        <div class="form-group">
+            <label>Setor vinculado</label>
+            <input type="text" value="${setorNome}" class="form-control" disabled>
+        </div>
+        <div class="form-group">
+            <label for="tipo">Tipo *</label>
+            <select id="tipo" class="form-control" required>
+                <option value="ambiente" ${data.tipo === "ambiente" ? "selected" : ""}>Ambiente</option>
+                <option value="equipamento" ${data.tipo === "equipamento" ? "selected" : ""}>Equipamento</option>
+            </select>
+        </div>
+    `;
+  }
+
+  // Cria modal
+  const modalOverlay = document.createElement("div");
+  modalOverlay.className = "admin-modal-overlay";
+
+  modalOverlay.innerHTML = `
         <div class="admin-modal-content">
             <div class="modal-header">
                 <h3>${title}</h3>
@@ -733,62 +944,70 @@ async function openHierarchyModal(type, docId = null) {
             </div>
         </div>
     `;
-    
-    document.body.appendChild(modalOverlay);
-    
 
-    // 1. Lógica do CEP 
-    const cepInput = modalOverlay.querySelector("#cep");
-    if (cepInput) {
-        cepInput.addEventListener("blur", async (e) => {
-            const val = e.target.value;
-            if (val.replace(/\D/g, '').length === 8) {
-                const loadingInfo = modalOverlay.querySelector("#cep-loading");
-                if(loadingInfo) loadingInfo.style.display = "block";
-                
-                const res = await buscarDadosCep(val);
-                
-                if(loadingInfo) loadingInfo.style.display = "none";
+  document.body.appendChild(modalOverlay);
 
-                if (!res.error) {
-                    // Preenche os campos automaticamente
-                    const fLogradouro = modalOverlay.querySelector("#logradouro");
-                    const fCidade = modalOverlay.querySelector("#cidade");
-                    const fUf = modalOverlay.querySelector("#uf");
-                    
-                    if (fLogradouro) fLogradouro.value = res.data.logradouro;
-                    if (fCidade) fCidade.value = res.data.localidade;
-                    if (fUf) fUf.value = res.data.uf;
-                    
-                    // Joga o foco para o número
-                    const fNumero = modalOverlay.querySelector("#numero");
-                    if (fNumero) fNumero.focus();
-                } else {
-                    showNotification(res.msg, "warning");
-                }
-            }
-        });
-    }
+  // 1. Lógica do CEP
+  const cepInput = modalOverlay.querySelector("#cep");
+  if (cepInput) {
+    cepInput.addEventListener("blur", async (e) => {
+      const val = e.target.value;
+      if (val.replace(/\D/g, "").length === 8) {
+        const loadingInfo = modalOverlay.querySelector("#cep-loading");
+        if (loadingInfo) loadingInfo.style.display = "block";
 
-    // Event listeners do modal
-   const closeModal = () => {
-        if (document.body.contains(modalOverlay)) document.body.removeChild(modalOverlay);
-    };
-    modalOverlay.querySelector(".admin-button-cancel").addEventListener("click", closeModal);
-    modalOverlay.addEventListener("click", (e) => { if (e.target === modalOverlay) closeModal(); });
-    
-    // Submissão do formulário
-   modalOverlay.querySelector("#hierarchy-form").addEventListener("submit", (e) => {
-        e.preventDefault();
-        saveHierarchyItem(type, docId, closeModal, modalOverlay); 
+        const res = await buscarDadosCep(val);
+
+        if (loadingInfo) loadingInfo.style.display = "none";
+
+        if (!res.error) {
+          // Preenche os campos automaticamente
+          const fLogradouro = modalOverlay.querySelector("#logradouro");
+          const fCidade = modalOverlay.querySelector("#cidade");
+          const fUf = modalOverlay.querySelector("#uf");
+
+          if (fLogradouro) fLogradouro.value = res.data.logradouro;
+          if (fCidade) fCidade.value = res.data.localidade;
+          if (fUf) fUf.value = res.data.uf;
+
+          // Joga o foco para o número
+          const fNumero = modalOverlay.querySelector("#numero");
+          if (fNumero) fNumero.focus();
+        } else {
+          showNotification(res.msg, "warning");
+        }
+      }
     });
-    
-    // Botão de exclusão
-    if (docId) {
-        modalOverlay.querySelector("#delete-hierarchy-btn").addEventListener("click", () => {
-            deleteHierarchyItem(type, docId, data.nome || docId, closeModal);
-        });
-    }
+  }
+
+  // Event listeners do modal
+  const closeModal = () => {
+    if (document.body.contains(modalOverlay))
+      document.body.removeChild(modalOverlay);
+  };
+  modalOverlay
+    .querySelector(".admin-button-cancel")
+    .addEventListener("click", closeModal);
+  modalOverlay.addEventListener("click", (e) => {
+    if (e.target === modalOverlay) closeModal();
+  });
+
+  // Submissão do formulário
+  modalOverlay
+    .querySelector("#hierarchy-form")
+    .addEventListener("submit", (e) => {
+      e.preventDefault();
+      saveHierarchyItem(type, docId, closeModal, modalOverlay);
+    });
+
+  // Botão de exclusão
+  if (docId) {
+    modalOverlay
+      .querySelector("#delete-hierarchy-btn")
+      .addEventListener("click", () => {
+        deleteHierarchyItem(type, docId, data.nome || docId, closeModal);
+      });
+  }
 }
 
 /* ==========================================================================
@@ -796,267 +1015,336 @@ async function openHierarchyModal(type, docId = null) {
    ========================================================================== */
 
 function getInstituicaoNome(instId) {
-    if (!instId || !hierarchyCache.instituicoes) return "Não selecionada";
-    const inst = hierarchyCache.instituicoes.find(i => i.id === instId);
-    return inst ? inst.nome || inst.id : "Não encontrada";
+  if (!instId || !hierarchyCache.instituicoes) return "Não selecionada";
+  const inst = hierarchyCache.instituicoes.find((i) => i.id === instId);
+  return inst ? inst.nome || inst.id : "Não encontrada";
 }
 
 function getUnidadeNome(unitId) {
-    if (!unitId || !hierarchyCache.unidades) return "Não selecionada";
-    const unit = hierarchyCache.unidades.find(u => u.id === unitId);
-    return unit ? unit.nome || unit.id : "Não encontrada";
+  if (!unitId || !hierarchyCache.unidades) return "Não selecionada";
+  const unit = hierarchyCache.unidades.find((u) => u.id === unitId);
+  return unit ? unit.nome || unit.id : "Não encontrada";
 }
-
 
 function checkAndUpdateSelection() {
-    if (currentSelectedInstId) {
-        const instExists = (hierarchyCache.instituicoes || []).some(inst => inst.id === currentSelectedInstId);
-        if (!instExists) {
-            currentSelectedInstId = null;
-            currentSelectedUnitId = null;
-            
-            renderInstituicoes();
-            renderUnidades(null);
-            renderSetores(null, true);
-            return;
-        }
-    }
-    
-    if (currentSelectedUnitId) {
-        const unit = (hierarchyCache.unidades || []).find(u => u.id === currentSelectedUnitId);
-        if (!unit || (currentSelectedInstId && unit.instituicaoId !== currentSelectedInstId)) {
-            currentSelectedUnitId = null;
-            
-            renderUnidades(currentSelectedInstId);
-            renderSetores(null, true);
-        }
-    }
-}
+  if (currentSelectedInstId) {
+    const instExists = (hierarchyCache.instituicoes || []).some(
+      (inst) => inst.id === currentSelectedInstId,
+    );
+    if (!instExists) {
+      currentSelectedInstId = null;
+      currentSelectedUnitId = null;
 
+      renderInstituicoes();
+      renderUnidades(null);
+      renderSetores(null, true);
+      return;
+    }
+  }
+
+  if (currentSelectedUnitId) {
+    const unit = (hierarchyCache.unidades || []).find(
+      (u) => u.id === currentSelectedUnitId,
+    );
+    if (
+      !unit ||
+      (currentSelectedInstId && unit.instituicaoId !== currentSelectedInstId)
+    ) {
+      currentSelectedUnitId = null;
+
+      renderUnidades(currentSelectedInstId);
+      renderSetores(null, true);
+    }
+  }
+}
 
 /* ==========================================================================
    OPERAÇÕES CRUD
    ========================================================================== */
 
 async function saveHierarchyItem(type, docId, closeModal, context) {
-    const currentUser = getUser();
-    if (!currentUser) return;
+  const currentUser = getUser();
+  if (!currentUser) return;
 
-    // Se context não foi passado (chamada antiga), usa document
-    const formScope = context || document;
+  // Se context não foi passado (chamada antiga), usa document
+  const formScope = context || document;
 
-    const saveButton = formScope.querySelector(".admin-button-save");
-    const originalBtnText = saveButton ? saveButton.innerHTML : "";
+  const saveButton = formScope.querySelector(".admin-button-save");
+  const originalBtnText = saveButton ? saveButton.innerHTML : "";
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+  }
+
+  const nomeInput = formScope.querySelector("#nome");
+  const nome = nomeInput ? nomeInput.value.trim() : "";
+
+  if (!nome) {
+    showNotification("O nome é obrigatório", "error");
     if (saveButton) {
-        saveButton.disabled = true;
-        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+      saveButton.disabled = false;
+      saveButton.innerHTML = originalBtnText;
+    }
+    return;
+  }
+
+  try {
+    let collectionName;
+
+    // Base Data
+    let data = {
+      nome,
+      updatedAt: serverTimestamp(),
+      updatedBy: currentUser.uid,
+    };
+
+    // --- CAPTURA DE ENDEREÇO (Instituição e Unidade) ---
+    if (type === "instituicao" || type === "unidade") {
+      const cepVal = formScope.querySelector("#cep")?.value.trim() || null;
+      const logradouroVal =
+        formScope.querySelector("#logradouro")?.value.trim() || "";
+      const numeroVal = formScope.querySelector("#numero")?.value.trim() || "";
+      const cidadeVal =
+        formScope.querySelector("#cidade")?.value.trim() || null;
+      const ufVal = formScope.querySelector("#uf")?.value || null; // <--- ORO PARA O FUSO
+
+      // Cria um endereço completo legível
+      const enderecoCompleto = logradouroVal
+        ? `${logradouroVal}, ${numeroVal} - ${cidadeVal}/${ufVal}`
+        : formScope.querySelector("#endereco")?.value.trim() || null; // Fallback antigo
+
+      // Adiciona ao objeto data
+      data = {
+        ...data,
+        cep: cepVal,
+        logradouro: logradouroVal,
+        numero: numeroVal,
+        cidade: cidadeVal,
+        uf: ufVal, // Salvando UF separado!
+        endereco: enderecoCompleto, // Mantendo compatibilidade
+      };
     }
 
-    const nomeInput = formScope.querySelector("#nome");
-    const nome = nomeInput ? nomeInput.value.trim() : "";
+    const cnpjInput = formScope.querySelector("#cnpj");
 
-    if (!nome) {
-        showNotification("O nome é obrigatório", "error");
-        if (saveButton) {
-            saveButton.disabled = false;
-            saveButton.innerHTML = originalBtnText;
+    switch (type) {
+      case "instituicao":
+        collectionName = "instituicoes";
+        data.cnpj = cnpjInput ? cnpjInput.value.trim() : null;
+        break;
+
+      case "unidade":
+        collectionName = "unidades";
+        data.cnpj = cnpjInput ? cnpjInput.value.trim() : null;
+        if (!docId) {
+          if (!currentSelectedInstId)
+            throw new Error("Instituição não selecionada.");
+          data.instituicaoId = currentSelectedInstId;
         }
-        return;
-    }
+        break;
 
-    try {
-        let collectionName;
-        
-        // Base Data
-        let data = {
-            nome,
-            updatedAt: serverTimestamp(),
-            updatedBy: currentUser.uid
-        };
-
-        // --- CAPTURA DE ENDEREÇO (Instituição e Unidade) ---
-        if (type === "instituicao" || type === "unidade") {
-            const cepVal = formScope.querySelector("#cep")?.value.trim() || null;
-            const logradouroVal = formScope.querySelector("#logradouro")?.value.trim() || "";
-            const numeroVal = formScope.querySelector("#numero")?.value.trim() || "";
-            const cidadeVal = formScope.querySelector("#cidade")?.value.trim() || null;
-            const ufVal = formScope.querySelector("#uf")?.value || null; // <--- ORO PARA O FUSO
-
-            // Cria um endereço completo legível
-            const enderecoCompleto = logradouroVal 
-                ? `${logradouroVal}, ${numeroVal} - ${cidadeVal}/${ufVal}` 
-                : (formScope.querySelector("#endereco")?.value.trim() || null); // Fallback antigo
-
-            // Adiciona ao objeto data
-            data = {
-                ...data,
-                cep: cepVal,
-                logradouro: logradouroVal,
-                numero: numeroVal,
-                cidade: cidadeVal,
-                uf: ufVal,      // Salvando UF separado!
-                endereco: enderecoCompleto // Mantendo compatibilidade
-            };
+      case "setor":
+        collectionName = "setores";
+        if (!docId) {
+          if (!currentSelectedUnitId)
+            throw new Error("Unidade não selecionada.");
+          if (!currentSelectedInstId)
+            throw new Error("Instituição não selecionada.");
+          data.unidadeId = currentSelectedUnitId;
+          data.instituicaoId = currentSelectedInstId;
         }
+        break;
 
-        const cnpjInput = formScope.querySelector("#cnpj");
-
-        switch (type) {
-            case "instituicao":
-                collectionName = "instituicoes";
-                data.cnpj = cnpjInput ? cnpjInput.value.trim() : null;
-                break;
-
-            case "unidade":
-                collectionName = "unidades";
-                data.cnpj = cnpjInput ? cnpjInput.value.trim() : null;
-                if (!docId) {
-                    if (!currentSelectedInstId) throw new Error("Instituição não selecionada.");
-                    data.instituicaoId = currentSelectedInstId;
-                }
-                break;
-
-            case "setor":
-                collectionName = "setores";
-                if (!docId) {
-                    if (!currentSelectedUnitId) throw new Error("Unidade não selecionada.");
-                    if (!currentSelectedInstId) throw new Error("Instituição não selecionada.");
-                    data.unidadeId = currentSelectedUnitId;
-                    data.instituicaoId = currentSelectedInstId;
-                }
-                break;
-
-            default:
-                throw new Error("Tipo de hierarquia inválido");
-        }
+      case "local":
+        collectionName = "locais";
+        data.tipo = formScope.querySelector("#tipo")?.value || "ambiente";
 
         if (!docId) {
-            data.createdBy = currentUser.uid;
-            data.createdAt = serverTimestamp();
-            // Para criar novo
-            await setDoc(doc(collection(db, collectionName)), data);
-            showNotification(`${type} criado com sucesso`, "success");
-        } else {
-            // Para atualizar
-            await updateDoc(doc(db, collectionName, docId), data);
-            showNotification(`${type} atualizado com sucesso`, "success");
+          if (!currentSelectedSetorId)
+            throw new Error("Setor não selecionado.");
+          if (!currentSelectedUnitId)
+            throw new Error("Unidade não selecionada.");
+          if (!currentSelectedInstId)
+            throw new Error("Instituição não selecionada.");
+
+          data.setorId = currentSelectedSetorId;
+          data.unidadeId = currentSelectedUnitId;
+          data.instituicaoId = currentSelectedInstId;
         }
+        break;
 
-        if (closeModal) closeModal();
-
-        // Recarrega a view
-        await loadHierarchyCache(true);
-        hierarchyCache = getCachedHierarchy();
-        await showHierarchyView();
-
-    } catch (error) {
-        console.error(`Erro ao salvar ${type}:`, error);
-        showNotification(`Erro ao salvar: ${error.message}`, "error");
-        
-        if (saveButton) {
-            saveButton.disabled = false;
-            saveButton.innerHTML = originalBtnText;
-        }
+      default:
+        throw new Error("Tipo de hierarquia inválido");
     }
+
+    if (!docId) {
+      data.createdBy = currentUser.uid;
+      data.createdAt = serverTimestamp();
+      // Para criar novo
+      await setDoc(doc(collection(db, collectionName)), data);
+      showNotification(`${type} criado com sucesso`, "success");
+    } else {
+      // Para atualizar
+      await updateDoc(doc(db, collectionName, docId), data);
+      showNotification(`${type} atualizado com sucesso`, "success");
+    }
+
+    if (closeModal) closeModal();
+
+    // Recarrega a view
+    await loadHierarchyCache(true);
+    hierarchyCache = getCachedHierarchy();
+    await showHierarchyView();
+  } catch (error) {
+    console.error(`Erro ao salvar ${type}:`, error);
+    showNotification(`Erro ao salvar: ${error.message}`, "error");
+
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.innerHTML = originalBtnText;
+    }
+  }
 }
 
 async function deleteHierarchyItem(type, docId, itemName, closeModal) {
-    const currentUser = getUser();
-    if (!currentUser) return;
+  const currentUser = getUser();
+  if (!currentUser) return;
 
-    if (type === "instituicao" && !hasRole(ROLES.SUPER_ADMIN)) {
-        showNotification("Apenas Super Admin pode excluir instituições", "error");
-        return;
-    }
+  if (type === "instituicao" && !hasRole(ROLES.SUPER_ADMIN)) {
+    showNotification("Apenas Super Admin pode excluir instituições", "error");
+    return;
+  }
 
-    if ((type === "unidade" || type === "setor") && 
-        !hasRole(ROLES.SUPER_ADMIN) && !hasRole(ROLES.ADMIN)) {
-        showNotification("Apenas administradores podem excluir", "error");
-        return;
-    }
+  if (
+    (type === "unidade" || type === "setor") &&
+    !hasRole(ROLES.SUPER_ADMIN) &&
+    !hasRole(ROLES.ADMIN)
+  ) {
+    showNotification("Apenas administradores podem excluir", "error");
+    return;
+  }
 
-    let hasDevices = false;
-    try {
-        let fieldName;
-        switch (type) {
-            case "instituicao": fieldName = "instituicaoID"; break;
-            case "unidade": fieldName = "unidadeID"; break;
-            case "setor": fieldName = "setorID"; break;
-            default: throw new Error("Tipo inválido");
-        }
-        hasDevices = await hasLinkedDevices(fieldName, docId);
-    } catch (error) {
-        console.error(`Erro ao verificar vínculos para ${type}:`, error);
-        showNotification(`Não foi possível verificar os dispositivos vinculados: ${error.message}`, "error");
-        return; 
-    }
-
-    let hasDependencies = false;
-    let dependencyMessage = "";
-
+  let hasDevices = false;
+  try {
+    let fieldName;
     switch (type) {
-        case "instituicao":
-            const unidadesDaInst = (hierarchyCache.unidades || []).filter(u => u.instituicaoId === docId);
-            if (unidadesDaInst.length > 0) {
-                hasDependencies = true;
-                dependencyMessage = `Esta instituição possui ${unidadesDaInst.length} unidade(s) vinculada(s).`;
-            }
-            break;
+      case "instituicao":
+        fieldName = "instituicaoID";
+        break;
+      case "unidade":
+        fieldName = "unidadeID";
+        break;
+      case "setor":
+        fieldName = "setorID";
+        break;
+      case "local":
+        fieldName = "localID";
+        break;
 
-        case "unidade":
-            const setoresDaUnidade = (hierarchyCache.setores || []).filter(s => s.unidadeId === docId);
-            if (setoresDaUnidade.length > 0) {
-                hasDependencies = true;
-                dependencyMessage = `Esta unidade possui ${setoresDaUnidade.length} setor(es) vinculado(s).`;
-            }
-            break;
+      default:
+        throw new Error("Tipo inválido");
+    }
+    hasDevices = await hasLinkedDevices(fieldName, docId);
+  } catch (error) {
+    console.error(`Erro ao verificar vínculos para ${type}:`, error);
+    showNotification(
+      `Não foi possível verificar os dispositivos vinculados: ${error.message}`,
+      "error",
+    );
+    return;
+  }
+
+  let hasDependencies = false;
+  let dependencyMessage = "";
+
+  switch (type) {
+    case "instituicao":
+      const unidadesDaInst = (hierarchyCache.unidades || []).filter(
+        (u) => u.instituicaoId === docId,
+      );
+      if (unidadesDaInst.length > 0) {
+        hasDependencies = true;
+        dependencyMessage = `Esta instituição possui ${unidadesDaInst.length} unidade(s) vinculada(s).`;
+      }
+      break;
+
+    case "unidade":
+      const setoresDaUnidade = (hierarchyCache.setores || []).filter(
+        (s) => s.unidadeId === docId,
+      );
+      if (setoresDaUnidade.length > 0) {
+        hasDependencies = true;
+        dependencyMessage = `Esta unidade possui ${setoresDaUnidade.length} setor(es) vinculado(s).`;
+      }
+      break;
+
+    case "setor":
+      const locaisDoSetor = (hierarchyCache.locais || []).filter(
+        (l) => l.setorId === docId,
+      );
+      if (locaisDoSetor.length > 0) {
+        hasDependencies = true;
+        dependencyMessage = `Este setor possui ${locaisDoSetor.length} local(is) vinculado(s).`;
+      }
+      break;
+  }
+
+  if (hasDevices) {
+    showNotification(
+      `Não é possível excluir ${type} "${itemName}" porque existem dispositivos vinculados a ele. ` +
+        `Desvincule os dispositivos antes de excluir.`,
+      "error",
+    );
+    return;
+  }
+
+  if (hasDependencies) {
+    showNotification(
+      `Não é possível excluir ${type} "${itemName}". ` +
+        `${dependencyMessage} ` +
+        `Você deve excluir os itens filhos antes de remover este item pai.`,
+      "error",
+    );
+    return;
+  }
+
+  const confirmationMessage =
+    `Tem certeza que deseja excluir ${type} "${itemName}"?<br><br>` +
+    `<small>Este item não possui dispositivos nem sub-itens vinculados.</small>`;
+
+  const confirmed = await showConfirmation(
+    confirmationMessage,
+    "Confirmar Exclusão",
+  );
+  if (!confirmed) return;
+
+  try {
+    let collectionName;
+    switch (type) {
+      case "instituicao":
+        collectionName = "instituicoes";
+        break;
+      case "unidade":
+        collectionName = "unidades";
+        break;
+      case "setor":
+        collectionName = "setores";
+        break;
+      case "local":
+        collectionName = "locais";
+        break;
     }
 
-    if (hasDevices) {
-        showNotification(
-            `Não é possível excluir ${type} "${itemName}" porque existem dispositivos vinculados a ele. ` +
-            `Desvincule os dispositivos antes de excluir.`,
-            "error"
-        );
-        return; 
-    }
+    await deleteDoc(doc(db, collectionName, docId));
+    showNotification(`${type} "${itemName}" excluído com sucesso`, "success");
 
-    if (hasDependencies) {
-        showNotification(
-            `Não é possível excluir ${type} "${itemName}". ` +
-            `${dependencyMessage} ` +
-            `Você deve excluir os itens filhos antes de remover este item pai.`,
-            "error"
-        );
-        return; 
-    }
+    if (closeModal) closeModal();
 
-    const confirmationMessage = `Tem certeza que deseja excluir ${type} "${itemName}"?<br><br>` +
-        `<small>Este item não possui dispositivos nem sub-itens vinculados.</small>`;
-
-        const confirmed = await showConfirmation(confirmationMessage, "Confirmar Exclusão");
-    if (!confirmed) return;
-
-    try {
-        let collectionName;
-        switch (type) {
-            case "instituicao": collectionName = "instituicoes"; break;
-            case "unidade": collectionName = "unidades"; break;
-            case "setor": collectionName = "setores"; break;
-        }
-
-        await deleteDoc(doc(db, collectionName, docId));
-        showNotification(`${type} "${itemName}" excluído com sucesso`, "success");
-
-        if (closeModal) closeModal();
-
-        await loadHierarchyCache(true);
-        hierarchyCache = getCachedHierarchy();
-        await showHierarchyView();
-
-    } catch (error) {
-        console.error(`Erro ao excluir ${type}:`, error);
-        showNotification(`Erro ao excluir: ${error.message}`, "error");
-    }
+    await loadHierarchyCache(true);
+    hierarchyCache = getCachedHierarchy();
+    await showHierarchyView();
+  } catch (error) {
+    console.error(`Erro ao excluir ${type}:`, error);
+    showNotification(`Erro ao excluir: ${error.message}`, "error");
+  }
 }
-

@@ -329,6 +329,7 @@ async function openDeviceModal(deviceId) {
                     <div class="form-group"><label>Instituição</label><select id="select-inst" required class="form-control"></select></div>
                     <div class="form-group"><label>Unidade</label><select id="select-unit" required class="form-control"></select></div>
                     <div class="form-group"><label>Setor</label><select id="select-setor" required class="form-control"></select></div>
+                    <div class="form-group"><label>Local</label><select id="select-local" required class="form-control"></select></div>
 
                     <hr class="soft-hr">
                     <h4 class="section-title">Hardware</h4>
@@ -438,68 +439,95 @@ function setupHierarchySelects(device) {
   const selInst = document.getElementById("select-inst");
   const selUnit = document.getElementById("select-unit");
   const selSector = document.getElementById("select-setor");
+  const selLocal = document.getElementById("select-local");
 
-  // 1. Popula Instituições
   let instsPermitidas = isSuperAdmin()
     ? hierarchyCache.instituicoes
-    : hierarchyCache.instituicoes; // O cache já está filtrado no Service
+    : hierarchyCache.instituicoes;
 
   selInst.innerHTML = '<option value="">Selecione...</option>';
   instsPermitidas.forEach((inst) => {
     selInst.innerHTML += `<option value="${inst.id}">${inst.nome}</option>`;
   });
 
-  // 2. Trava Instituição (se Admin ou Filtro Ativo)
   if (deviceManagementFilter && deviceManagementFilter.id !== "all") {
     selInst.value = deviceManagementFilter.id;
     selInst.disabled = true;
   }
+
   if (device && device.instituicaoID) {
     selInst.value = device.instituicaoID;
   }
 
-  // 3. Funções de Cascata (Usando o Cache Global)
   const populateUnits = (instId) => {
     selUnit.innerHTML = '<option value="">Selecione...</option>';
     selSector.innerHTML = '<option value="">Selecione...</option>';
+    selLocal.innerHTML = '<option value="">Selecione...</option>';
     if (!instId) return;
-    // Filtra TODAS as unidades da instituição selecionada disponíveis no cache
+
     const units = hierarchyCache.unidades.filter(
       (u) => u.instituicaoId === instId,
     );
-    units.forEach(
-      (u) =>
-        (selUnit.innerHTML += `<option value="${u.id}">${u.nome}</option>`),
-    );
+
+    units.forEach((u) => {
+      selUnit.innerHTML += `<option value="${u.id}">${u.nome}</option>`;
+    });
   };
 
   const populateSectors = (unitId) => {
     selSector.innerHTML = '<option value="">Selecione...</option>';
+    selLocal.innerHTML = '<option value="">Selecione...</option>';
     if (!unitId) return;
-    // Filtra TODOS os setores da unidade selecionada
+
     const sectors = hierarchyCache.setores.filter(
       (s) => s.unidadeId === unitId,
     );
-    sectors.forEach(
-      (s) =>
-        (selSector.innerHTML += `<option value="${s.id}">${s.nome}</option>`),
-    );
+
+    sectors.forEach((s) => {
+      selSector.innerHTML += `<option value="${s.id}">${s.nome}</option>`;
+    });
   };
 
-  // Listeners
+  const populateLocals = (sectorId) => {
+    selLocal.innerHTML = '<option value="">Selecione...</option>';
+    if (!sectorId) return;
+
+    const locals = (hierarchyCache.locais || []).filter(
+      (l) => l.setorId === sectorId || l.setorID === sectorId,
+    );
+
+    locals.forEach((l) => {
+      selLocal.innerHTML += `<option value="${l.id}">${l.nome}</option>`;
+    });
+  };
+
   selInst.addEventListener("change", () => populateUnits(selInst.value));
   selUnit.addEventListener("change", () => populateSectors(selUnit.value));
+  selSector.addEventListener("change", () => populateLocals(selSector.value));
 
-  // Inicialização (Preencher se editando)
   if (selInst.value) {
-    populateUnits(selInst.value); // Carrega as unidades da instituição atual
+    populateUnits(selInst.value);
+
     if (device && device.unidadeID) {
       selUnit.value = device.unidadeID;
-      populateSectors(device.unidadeID); // Carrega setores da unidade atual
-      if (device.setorID) selSector.value = device.setorID;
+      populateSectors(device.unidadeID);
+
+      if (device.setorID) {
+        selSector.value = device.setorID;
+        populateLocals(device.setorID);
+
+        if (device.localID) {
+          selLocal.value = device.localID;
+        }
+      }
     }
   }
+console.log("locais cache:", hierarchyCache.locais);
+console.log("setor atual:", selSector.value);
+
+
 }
+
 
 // === FUNÇÕES AUXILIARES (Eventos, Save) ===
 function setupViewEvents() {
@@ -580,7 +608,9 @@ function setupViewEvents() {
 }
 
 function parseNumberOrDefault(value, fallback) {
-  const normalized = String(value ?? "").trim().replace(",", ".");
+  const normalized = String(value ?? "")
+    .trim()
+    .replace(",", ".");
   if (normalized === "") return fallback;
 
   const parsed = Number(normalized);
@@ -604,6 +634,7 @@ async function handleSave(existingId, closeCallback) {
   const instSelect = document.getElementById("select-inst");
   const unitSelect = document.getElementById("select-unit");
   const setorSelect = document.getElementById("select-setor");
+  const localSelect = document.getElementById("select-local");
 
   let existingData = {};
   if (existingId) {
@@ -640,9 +671,11 @@ async function handleSave(existingId, closeCallback) {
     instituicaoID: instSelect.value,
     unidadeID: unitSelect.value,
     setorID: setorSelect.value,
+    localID: localSelect.value,
     nomeInstituicao: instSelect.options[instSelect.selectedIndex]?.text || "",
     nomeUnidade: unitSelect.options[unitSelect.selectedIndex]?.text || "",
     nomeSetor: setorSelect.options[setorSelect.selectedIndex]?.text || "",
+    nomeLocal: localSelect.options[localSelect.selectedIndex]?.text || "",
 
     alarmeMin: {
       sonda: parseNumberOrDefault(
@@ -678,9 +711,14 @@ async function handleSave(existingId, closeCallback) {
     return showNotification("Nome do dispositivo é obrigatório.", "error");
   }
 
-  if (!deviceData.instituicaoID || !deviceData.unidadeID || !deviceData.setorID) {
+  if (
+    !deviceData.instituicaoID ||
+    !deviceData.unidadeID ||
+    !deviceData.setorID ||
+    !deviceData.localID
+  ) {
     return showNotification(
-      "Instituição, unidade e setor são obrigatórios.",
+      "Instituição, unidade, setor e local são obrigatórios.",
       "error",
     );
   }
